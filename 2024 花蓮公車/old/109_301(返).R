@@ -17,6 +17,8 @@ bus_1301[which(bus_1301[, 18] == 67),18] <- 9; bus_1301[which(bus_1301[, 21] == 
 nbus_1301G <- bus_1301[which(as.numeric(bus_1301$上車招呼站代碼) - as.numeric(bus_1301$下車招呼站代碼) <= 0), ]
 nbus_1301B <- bus_1301[which(as.numeric(bus_1301$上車招呼站代碼) - as.numeric(bus_1301$下車招呼站代碼) >= 0), ]
 
+print('123')
+
 ### 301 
 bus_301 <- data_301[-which(data_301$路線名稱=="301區間車"), ]
 bus_301[which(bus_301[, 18] == 0),18] <-0;bus_301[which(bus_301[, 21] == 0),21] <-0
