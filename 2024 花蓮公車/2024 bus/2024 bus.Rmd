@@ -203,8 +203,17 @@ PaymentPrice
 110traffic.hl.gov.tw
 
 ```{r}
-lapply(ticket_data[ , -1], unique)
+# for(i in names(ticket_data)){
+#   print(ticket_data %>% count(get(i)))
+# }
+
+lapply(names(ticket_data), function(col) {
+  print(ticket_data %>% count(.data[[col]]))
+})
+
 ```
+
+
 
 
 
