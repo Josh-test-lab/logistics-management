@@ -1,0 +1,224 @@
+---
+title: "2024 bus"
+output: html_notebook
+author: "Hsu, Yao-Chih"
+---
+
+```{r}
+library(xml2)
+library(data.table)
+library(dplyr)
+
+
+# 讀取 XML 檔案
+doc <- read_xml("../../大數據組需要分析的資料/107-11403-花蓮-太魯閣客運_市區客運/114年-11303-11403/202403_ic_HUA_0412_01/202403_ic_HUA_0412_01.xml")
+
+# 擷取所有 BusICTicket 節點
+tickets <- xml_find_all(doc, ".//BusICTicket")
+tickets_str <- vapply(tickets, as.character, character(1))
+
+get_xml_text <- function(node, path) {
+  result <- xml_find_first(node, path)
+  if (length(result) == 0 || is.na(result)) return(NA_character_)
+  xml_text(result, trim = TRUE)
+}
+
+start_time = Sys.time()
+
+# 將票證資料轉為資料框
+ticket_data <- rbindlist(lapply(tickets_str, function(ticket_str) {
+  ticket <- read_xml(ticket_str)
+  list(
+    ID = get_xml_text(ticket, "ID"),
+    IDType = get_xml_text(ticket, "IDType"),
+    HolderType = get_xml_text(ticket, "HolderType"),
+    TicketType = get_xml_text(ticket, "TicketType"),
+    SubTicketType = get_xml_text(ticket, "SubTicketType"),
+    PlateNumber = get_xml_text(ticket, "PlateNumber"),
+    RouteUID = get_xml_text(ticket, "RouteUID"),
+    RouteName = get_xml_text(ticket, "RouteName"),
+    SubRouteUID = get_xml_text(ticket, "SubRouteUID"),
+    SubRouteName = get_xml_text(ticket, "SubRouteName"),
+    Direction = get_xml_text(ticket, "Direction"),
+    FarePricingType = get_xml_text(ticket, "FarePricingType"),
+    StopOrStation = get_xml_text(ticket, "StopOrStation"),
+    BoardingStopUID = get_xml_text(ticket, ".//BoardingStopUID"),
+    BoardingStopName = get_xml_text(ticket, ".//BoardingStopName"),
+    BoardingStopSequence = get_xml_text(ticket, ".//BoardingStopSequence"),
+    BoardingTime = get_xml_text(ticket, ".//BoardingTime"),
+    DeboardingStopUID = get_xml_text(ticket, ".//DeboardingStopUID"),
+    DeboardingStopName = get_xml_text(ticket, ".//DeboardingStopName"),
+    DeboardingStopSequence = get_xml_text(ticket, ".//DeboardingStopSequence"),
+    DeboardingTime = get_xml_text(ticket, ".//DeboardingTime"),
+    Price = get_xml_text(ticket, "Price"),
+    Discount = get_xml_text(ticket, "Discount"),
+    TransferCode = get_xml_text(ticket, "TransferCode"),
+    DiscountInfo = get_xml_text(ticket, "DiscountInfo"),
+    PaymentPrice = get_xml_text(ticket, "PaymentPrice")
+  )
+}), fill = TRUE)
+
+end_time = Sys.time()
+
+print(paste0('Cost time: ', end_time - start_time, ' seconds'))
+
+# 檢視前幾筆資料
+head(ticket_data)
+
+```
+
+
+```{r}
+names(ticket_data)
+```
+
+ID
+
+資料筆唯一識別碼，用於區隔每一筆旅次或票證紀錄。 
+ticp.motc.gov.tw
+
+IDType
+
+識別碼類型，常見如車牌編號、票證序號等，指明 ID 的來源或格式。 
+ticp.motc.gov.tw
+
+HolderType
+
+票證持有者類型，例如一般民眾、學生、敬老卡等。 
+ticp.motc.gov.tw
+
+TicketType
+
+票種，如单程票、電子票證、日票等，用以區分不同票價方案。 
+110traffic.hl.gov.tw
+
+SubTicketType
+
+子票種／細分類，如半價、愛心票、團體票等，為 TicketType 的細部補充。 
+ticp.motc.gov.tw
+
+PlateNumber
+
+車輛牌照號碼，標示該筆旅次所搭乘的車輛。 
+ticp.motc.gov.tw
+
+RouteUID
+
+路線全域唯一識別碼，用於串接不同 API 時對應相同路線。 
+交通部公共運輸資料開放平台
+
+RouteName
+
+路線名稱，例如「302 花蓮－太魯閣」。 
+110traffic.hl.gov.tw
+
+SubRouteUID
+
+附屬路線識別碼，編碼原則：前四碼主路線，第五碼正副路線，第六碼去返程 
+motc-ptx.gitbook.io
+
+SubRouteName
+
+附屬路線名稱，對應 SubRouteUID 的文字描述。 
+Gist
+
+Direction
+
+去／返程方向，通常 0 或 1 表示去程，2 或 3 表示返程。 
+motc-ptx.gitbook.io
+
+FarePricingType
+
+計費方式，如「區間計費」、「里程計費」、「階梯票價」等。 
+ticp.motc.gov.tw
+
+StopOrStation
+
+表示站牌 (Stop) 或站位 (Station)；停靠站點類型，用於票證 OD 分析時對應的資料層級。 
+Gist
+
+BoardingStopUID
+
+上車站點識別碼，對應 StopOrStation。 
+110traffic.hl.gov.tw
+
+BoardingStopName
+
+上車站名。 
+110traffic.hl.gov.tw
+
+BoardingStopSequence
+
+上車站在整條路線中的站序（第幾站）。 
+ticp.motc.gov.tw
+
+BoardingTime
+
+上車時間（ISO 8601 格式）。 
+ticp.motc.gov.tw
+
+DeboardingStopUID
+
+下車站點識別碼。 
+110traffic.hl.gov.tw
+
+DeboardingStopName
+
+下車站名。 
+110traffic.hl.gov.tw
+
+DeboardingStopSequence
+
+下車站在路線中的站序。 
+ticp.motc.gov.tw
+
+DeboardingTime
+
+下車時間（ISO 8601）。 
+ticp.motc.gov.tw
+
+Price
+
+計算後之票價（未含折扣）。 
+110traffic.hl.gov.tw
+
+Discount
+
+折扣比例或金額，例如「半價」、「８折」。 
+ticp.motc.gov.tw
+
+TransferCode
+
+轉乘優惠代碼，用於標示可否轉乘及轉乘時限等規則。 
+ticp.motc.gov.tw
+
+DiscountInfo
+
+折扣說明文字，補充 Discount 欄位的詳細條件。 
+ticp.motc.gov.tw
+
+PaymentPrice
+
+實際支付金額（Price 扣除 Discount 後）。 
+110traffic.hl.gov.tw
+
+```{r}
+lapply(ticket_data[ , -1], unique)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
