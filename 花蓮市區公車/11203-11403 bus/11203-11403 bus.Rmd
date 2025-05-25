@@ -5,217 +5,334 @@ author: "Hsu, Yao-Chih"
 ---
 
 ```{r}
+# library
 library(xml2)
 library(data.table)
 library(dplyr)
+library(lubridate)
+```
 
+```{r}
+# function
+# load .xml file function
+xml_loader <- function(path){
+  xml_data <- read_xml(path)
+  return(xml_data)
+}
 
-# 讀取 XML 檔案
-doc <- read_xml("../../大數據組需要分析的資料/107-11403-花蓮-太魯閣客運_市區客運/114年-11303-11403/202403_ic_HUA_0412_01/202403_ic_HUA_0412_01.xml")
-
-# 擷取所有 BusICTicket 節點
-tickets <- xml_find_all(doc, ".//BusICTicket")
-tickets_str <- vapply(tickets, as.character, character(1))
-
+# transform to data frame by RouteName
 get_xml_text <- function(node, path) {
   result <- xml_find_first(node, path)
   if (length(result) == 0 || is.na(result)) return(NA_character_)
   xml_text(result, trim = TRUE)
 }
 
+xml_to_dataframe <- function(xml_data){
+  tickets <- xml_find_all(xml_data, ".//BusICTicket")
+  tickets_str <- vapply(tickets, as.character, character(1))
+
+  ticket_data <- rbindlist(lapply(tickets_str, function(ticket_str) {
+    ticket <- read_xml(ticket_str)
+    list(
+      ID = get_xml_text(ticket, "ID"),
+      IDType = get_xml_text(ticket, "IDType"),
+      HolderType = get_xml_text(ticket, "HolderType"),
+      TicketType = get_xml_text(ticket, "TicketType"),
+      SubTicketType = get_xml_text(ticket, "SubTicketType"),
+      PlateNumber = get_xml_text(ticket, "PlateNumber"),
+      RouteUID = get_xml_text(ticket, "RouteUID"),
+      RouteName = get_xml_text(ticket, "RouteName"),
+      SubRouteUID = get_xml_text(ticket, "SubRouteUID"),
+      SubRouteName = get_xml_text(ticket, "SubRouteName"),
+      Direction = get_xml_text(ticket, "Direction"),
+      FarePricingType = get_xml_text(ticket, "FarePricingType"),
+      StopOrStation = get_xml_text(ticket, "StopOrStation"),
+      BoardingStopUID = get_xml_text(ticket, ".//BoardingStopUID"),
+      BoardingStopName = get_xml_text(ticket, ".//BoardingStopName"),
+      BoardingStopSequence = get_xml_text(ticket, ".//BoardingStopSequence"),
+      BoardingTime = get_xml_text(ticket, ".//BoardingTime"),
+      DeboardingStopUID = get_xml_text(ticket, ".//DeboardingStopUID"),
+      DeboardingStopName = get_xml_text(ticket, ".//DeboardingStopName"),
+      DeboardingStopSequence = get_xml_text(ticket, ".//DeboardingStopSequence"),
+      DeboardingTime = get_xml_text(ticket, ".//DeboardingTime"),
+      Price = get_xml_text(ticket, "Price"),
+      Discount = get_xml_text(ticket, "Discount"),
+      TransferCode = get_xml_text(ticket, "TransferCode"),
+      DiscountInfo = get_xml_text(ticket, "DiscountInfo"),
+      PaymentPrice = get_xml_text(ticket, "PaymentPrice")
+    )
+  }), fill = TRUE)
+  
+  return(ticket_data)
+}
+
+# loader
+loader <- function(path){
+  xml_data = data.frame()
+  for (i in 1:length(path[[1]])){
+    xml_raw_data = xml_loader(path=path[[1]][i])
+    
+    xml_data <- rbind(xml_data, xml_to_dataframe(xml_raw_data))
+  }
+  
+  data <- xml_data %>%
+    group_by(RouteName) %>%
+    group_split() %>% 
+    as.list()
+  names(data) <- sapply(data, function(df) unique(df$RouteName))  # list name
+  
+  return(data)
+}
+
+# simple summary for every variables
+data_summary <- function(df){
+  df_summary = list()
+  pb <- txtProgressBar(min = 0, max = length(months), style = 3)
+  for (month_index in 1:length(months)){
+    df_summary[[months[month_index]]] <- lapply(df[[month_index]], function(data) {
+      lapply(names(data), function(col) {
+        data %>% count(.data[[col]])
+      }) |> setNames(names(data))
+    })
+    names(df_summary[[months[month_index]]]) <- names(df[[month_index]])
+    setTxtProgressBar(pb, month_index)
+  }
+  close(pb)
+  return(df_summary)
+}
+```
+
+```{r}
+year = 2024  # 西元
+month.from = 6
+month.to = 12
+
+
+# 檔案路徑
+base_path <- "../../大數據組需要分析的資料/107-11403-花蓮-太魯閣客運_市區客運/114年-11303-11403"
+months <- sprintf("%04d%02d", year, month.from:month.to)
+paths <- unlist(lapply(months, function(ym) {
+  folder <- sprintf("%s_ic_HUA_0412_01", ym)
+  files <- sprintf("%s_ic_HUA_0412_0%d.xml", ym, 1:3)
+  file.path(base_path, folder, files)
+}))
+
 start_time = Sys.time()
 
-# 將票證資料轉為資料框
-ticket_data <- rbindlist(lapply(tickets_str, function(ticket_str) {
-  ticket <- read_xml(ticket_str)
-  list(
-    ID = get_xml_text(ticket, "ID"),
-    IDType = get_xml_text(ticket, "IDType"),
-    HolderType = get_xml_text(ticket, "HolderType"),
-    TicketType = get_xml_text(ticket, "TicketType"),
-    SubTicketType = get_xml_text(ticket, "SubTicketType"),
-    PlateNumber = get_xml_text(ticket, "PlateNumber"),
-    RouteUID = get_xml_text(ticket, "RouteUID"),
-    RouteName = get_xml_text(ticket, "RouteName"),
-    SubRouteUID = get_xml_text(ticket, "SubRouteUID"),
-    SubRouteName = get_xml_text(ticket, "SubRouteName"),
-    Direction = get_xml_text(ticket, "Direction"),
-    FarePricingType = get_xml_text(ticket, "FarePricingType"),
-    StopOrStation = get_xml_text(ticket, "StopOrStation"),
-    BoardingStopUID = get_xml_text(ticket, ".//BoardingStopUID"),
-    BoardingStopName = get_xml_text(ticket, ".//BoardingStopName"),
-    BoardingStopSequence = get_xml_text(ticket, ".//BoardingStopSequence"),
-    BoardingTime = get_xml_text(ticket, ".//BoardingTime"),
-    DeboardingStopUID = get_xml_text(ticket, ".//DeboardingStopUID"),
-    DeboardingStopName = get_xml_text(ticket, ".//DeboardingStopName"),
-    DeboardingStopSequence = get_xml_text(ticket, ".//DeboardingStopSequence"),
-    DeboardingTime = get_xml_text(ticket, ".//DeboardingTime"),
-    Price = get_xml_text(ticket, "Price"),
-    Discount = get_xml_text(ticket, "Discount"),
-    TransferCode = get_xml_text(ticket, "TransferCode"),
-    DiscountInfo = get_xml_text(ticket, "DiscountInfo"),
-    PaymentPrice = get_xml_text(ticket, "PaymentPrice")
-  )
-}), fill = TRUE)
+# 將票證資料轉為資料框，以列表呈現
+counter = 1
+pb <- txtProgressBar(min = 0, max = length(paths), style = 3)
+df = list()
+
+for (month_index in seq(1, length(paths), by = 3)){
+  path = paths[month_index:min(month_index + 2, length(paths))]
+  df[[months[counter]]] = loader(path)
+  
+  setTxtProgressBar(pb, counter)
+  counter = counter + 1
+}
+close(pb)
+
 
 end_time = Sys.time()
 
 print(paste0('Cost time: ', end_time - start_time, ' seconds'))
 
 # 檢視前幾筆資料
-head(ticket_data)
+head(df[[1]][[1]])
+str(df[[1]])
 
 ```
 
 
 ```{r}
-names(ticket_data)
+# variables
+names(df[[1]][[1]])
 ```
 
-ID
+| 欄位名稱                | 中文名稱       | 說明                                           
+| ------------------------| -------------- | --------------------------------------------   
+| `ID`                    | 票證識別碼     | 資料筆唯一識別碼，用於區隔每一筆旅次或票證紀錄。                     
+| `IDType`                | 識別碼類型     | 識別碼類型，如車牌編號、票證序號等，指明 ID 的來源或格式。              
+| `HolderType`            | 票證持有者類   | 票證持有者類型，例如一般民眾、學生、敬老卡等。                     
+| `TicketType`            | 票種           | 如單程票、電子票證、日票等，用以區分不同票價方案。                    
+| `SubTicketType`         | 子票種         | 子票種／細分類，如半價、愛心票、團體票等，為 TicketType 的細部補充。     
+| `PlateNumber`           | 車輛牌號       | 車輛牌照號碼，標示該筆旅次所搭乘的車輛。                         
+| `RouteUID`              | 路線識別碼     | 路線全域唯一識別碼，用於串接不同 API 時對應相同路線。          
+| `RouteName`             | 路線名稱       |  路線名稱，例如「302 花蓮－太魯閣」。                         
+| `SubRouteUID`           | 附屬路線識別碼 | 編碼原則：前四碼主路線，第五碼正副路線，第六碼去返程。                 
+| `SubRouteName`          | 附屬路線名稱   | 附屬路線名稱，對應 SubRouteUID 的文字描述。                 
+| `Direction`             | 去／返程方向   | 通常 0 或 1 表示去程，2 或 3 表示返程。                    
+| `FarePricingType`       | 計費方式       | 如「區間計費」、「里程計費」、「階梯票價」等。                      
+| `StopOrStation`         | 站點類型       | 表示站牌 (Stop) 或站位 (Station)，用於票證 OD 分析對應的資料層級。 
+| `BoardingStopUID`       | 上車站點識別碼 | 上車站點識別碼，對應 StopOrStation。                    
+| `BoardingStopName`      | 上車站名       | 上車站名稱。                                      
+| `BoardingStopSequence`  | 上車站序       | 上車站在整條路線中的站序（第幾站）。                           
+| `BoardingTime`          | 上車時間       | 上車時間（ISO 8601 格式）。                           
+| `DeboardingStopUID`     | 下車站點識別碼 | 下車站點識別碼。                                     
+| `DeboardingStopName`    | 下車站名       | 下車站名稱。                                       
+| `DeboardingStopSequence`| 下車站序       | 下車站在整條路線中的站序。                               
+| `DeboardingTime`        | 下車時間       | 下車時間（ISO 8601 格式）。                          
+| `Price`                 | 原始票價       | 計算後之票價（未含折扣）。                                
+| `Discount`              | 折扣           | 折扣比例或金額，例如「半價」、「８折」。                         
+| `TransferCode`          | 轉乘代碼       | 轉乘優惠代碼，用於標示可否轉乘及轉乘時限等規則。                    
+| `DiscountInfo`          | 折扣說明       | 折扣補充說明文字，補充 Discount 欄位的詳細條件。             
+| `PaymentPrice`          | 實付金額       | 實際支付金額（Price 扣除 Discount 後）。               
 
-資料筆唯一識別碼，用於區隔每一筆旅次或票證紀錄。 
-ticp.motc.gov.tw
+| 欄位名稱                | 資料來源                   | 變數
+| ------------------------| -------------------------- | ----------------------------------------- |
+| `ID`                    | ticp.motc.gov.tw           | #########################################################################
+| `IDType`                | ticp.motc.gov.tw           | EasyCard、PaymentID、iPASS、icash
+| `HolderType`            | ticp.motc.gov.tw           | A、B、C01、C02、C09 (???
+| `TicketType`            | 110traffic.hl.gov.tw       | 1、4 (???
+| `SubTicketType`         | ticp.motc.gov.tw           | HUA-199、HUA-399(花蓮通勤月票)
+| `PlateNumber`           | ticp.motc.gov.tw           | 009-FV、010-FV、011-FV、075-FV、076-FV、
+                                                         EAA-283、EAA-286、EAA-287、EAA-287、EAA-289
+| `RouteUID`              | 交通部公共運輸資料開放平台 | HUA0301、HUA0302、HUA0303、HUA0305
+| `RouteName`             | 110traffic.hl.gov.tw       | 301、302、303、305
+| `SubRouteUID`           | motc-ptx.gitbook.io        | HUA030101、HUA030102、HUA030201、HUA030202、HUA030301、HUA030302、
+                                                         HUA0303B1、HUA0303B2、HUA0303C1、HUA0303C2
+| `SubRouteName`          | Gist                       | 301、302、303、303B、303C、303D、305、305A
+| `Direction`             | motc-ptx.gitbook.io        | 0、1 (哪個是去，哪個是回?)
+| `FarePricingType`       | ticp.motc.gov.tw           | ODFares (???
+| `StopOrStation`         | Gist                       | 0 (???
+| `BoardingStopUID`       | 110traffic.hl.gov.tw       | HUA290407、HUA290442、HUA290453、HUA290470、HUA290471、HUA290494	、
+                                                         HUA290495、HUA290528、HUA290529、HUA290530
+| `BoardingStopName`      | 110traffic.hl.gov.tw       | 三角市場、上騰高商、中山(市八)市場	、中山三慶豐七街口、中華紙漿、中華路、
+                                                         九曲洞、亞洲水泥廠、仁安社區、信義國小
+| `BoardingStopSequence`  | ticp.motc.gov.tw           | 1、10、11、12、13、14、15、16、17、18 
+| `BoardingTime`          | ticp.motc.gov.tw           | #########################################################################
+| `DeboardingStopUID`     | 110traffic.hl.gov.tw       | -99(逃票)、HUA290407、HUA290442、HUA290452、HUA290470、HUA290471、HUA290494、	
+                                                         HUA290528、HUA290529、HUA290530
+| `DeboardingStopName`    | 110traffic.hl.gov.tw       | -99、三角市場、上騰高商、中山(市八)市場、中山三慶豐七街口、中華紙漿、
+                                                         中華路、九曲洞、亞洲水泥廠、仁安社區 (-99 ???
+| `DeboardingStopSequence`| ticp.motc.gov.tw           | -99、1、10、11、12、13、14、15、16、17 (-99 ???
+| `DeboardingTime`        | ticp.motc.gov.tw           | #########################################################################
+| `Price`                 | 110traffic.hl.gov.tw       | 0、104、106、109、110、12、13、149、15、16
+| `Discount`              | ticp.motc.gov.tw           | 0、12、13、15、16、17、18、19、20、21			
+| `TransferCode`          | ticp.motc.gov.tw           | 0102、0199、0202、0299、0302、0399、0402、0499、0602、0702
+| `DiscountInfo`          | ticp.motc.gov.tw           | ???(第一項變數沒有值)
+| `PaymentPrice`          | 110traffic.hl.gov.tw       | 0、1、10、104、109、11、110、12、13、14
 
-IDType
-
-識別碼類型，常見如車牌編號、票證序號等，指明 ID 的來源或格式。 
-ticp.motc.gov.tw
-
-HolderType
-
-票證持有者類型，例如一般民眾、學生、敬老卡等。 
-ticp.motc.gov.tw
-
-TicketType
-
-票種，如单程票、電子票證、日票等，用以區分不同票價方案。 
-110traffic.hl.gov.tw
-
-SubTicketType
-
-子票種／細分類，如半價、愛心票、團體票等，為 TicketType 的細部補充。 
-ticp.motc.gov.tw
-
-PlateNumber
-
-車輛牌照號碼，標示該筆旅次所搭乘的車輛。 
-ticp.motc.gov.tw
-
-RouteUID
-
-路線全域唯一識別碼，用於串接不同 API 時對應相同路線。 
-交通部公共運輸資料開放平台
-
-RouteName
-
-路線名稱，例如「302 花蓮－太魯閣」。 
-110traffic.hl.gov.tw
-
-SubRouteUID
-
-附屬路線識別碼，編碼原則：前四碼主路線，第五碼正副路線，第六碼去返程 
-motc-ptx.gitbook.io
-
-SubRouteName
-
-附屬路線名稱，對應 SubRouteUID 的文字描述。 
-Gist
-
-Direction
-
-去／返程方向，通常 0 或 1 表示去程，2 或 3 表示返程。 
-motc-ptx.gitbook.io
-
-FarePricingType
-
-計費方式，如「區間計費」、「里程計費」、「階梯票價」等。 
-ticp.motc.gov.tw
-
-StopOrStation
-
-表示站牌 (Stop) 或站位 (Station)；停靠站點類型，用於票證 OD 分析時對應的資料層級。 
-Gist
-
-BoardingStopUID
-
-上車站點識別碼，對應 StopOrStation。 
-110traffic.hl.gov.tw
-
-BoardingStopName
-
-上車站名。 
-110traffic.hl.gov.tw
-
-BoardingStopSequence
-
-上車站在整條路線中的站序（第幾站）。 
-ticp.motc.gov.tw
-
-BoardingTime
-
-上車時間（ISO 8601 格式）。 
-ticp.motc.gov.tw
-
-DeboardingStopUID
-
-下車站點識別碼。 
-110traffic.hl.gov.tw
-
-DeboardingStopName
-
-下車站名。 
-110traffic.hl.gov.tw
-
-DeboardingStopSequence
-
-下車站在路線中的站序。 
-ticp.motc.gov.tw
-
-DeboardingTime
-
-下車時間（ISO 8601）。 
-ticp.motc.gov.tw
-
-Price
-
-計算後之票價（未含折扣）。 
-110traffic.hl.gov.tw
-
-Discount
-
-折扣比例或金額，例如「半價」、「８折」。 
-ticp.motc.gov.tw
-
-TransferCode
-
-轉乘優惠代碼，用於標示可否轉乘及轉乘時限等規則。 
-ticp.motc.gov.tw
-
-DiscountInfo
-
-折扣說明文字，補充 Discount 欄位的詳細條件。 
-ticp.motc.gov.tw
-
-PaymentPrice
-
-實際支付金額（Price 扣除 Discount 後）。 
-110traffic.hl.gov.tw
 
 ```{r}
-# for(i in names(ticket_data)){
-#   print(ticket_data %>% count(get(i)))
-# }
+# simple summary for every variables
+df_summary = data_summary(df)
 
-lapply(names(ticket_data), function(col) {
-  print(ticket_data %>% count(.data[[col]]))
-})
+#df_summary
+```
 
+```{r}
+# 運量
+bus = '301'
+transport_volume = NULL
+for (month_index in months){
+  transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
+}
+
+windowsFonts(kai = windowsFont("DFKai-SB"))
+par(family = "kai", mar = c(5, 4, 4, 7))  # 字體與圖寬
+plot(x = month.from:month.to,
+     y = transport_volume,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = "blue",
+     xlab = "月份",
+     ylab = "進站人次",
+     main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線總運量'),
+     ylim = c(min(transport_volume) * 0.9, max(transport_volume) * 1.1)
+     )
+
+text(x = month.from:month.to,
+     y = transport_volume + max(transport_volume) * 0.02,
+     labels = transport_volume,
+     pos = 3,            # 文字顯示在點上方
+     cex = 0.8,          # 文字大小
+     col = "black"
+)
+
+grid()  # 網格線
+
+# 圖例
+legend("topright", 
+       legend = paste0(bus, '路線'), 
+       col = "blue", 
+       lwd = 2, 
+       pch = 16,
+       bty = "n",
+       inset = c(-0.25, 0),
+       xpd = TRUE
+       )
+```
+
+```{r}
+# TPASS 運量
+bus = '301'
+transport_volume = NULL
+tpass = NULL
+
+for (month_index in months){
+  transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
+  tpass = c(tpass, df_summary[[month_index]][[bus]][['SubTicketType']][[2]][1] + df_summary[[month_index]][[bus]][['SubTicketType']][[2]][2])
+}
+
+windowsFonts(kai = windowsFont("DFKai-SB"))
+par(family = "kai", mar = c(5, 4, 4, 7))  # 字體與圖寬
+plot(x = month.from:month.to,
+     y = transport_volume,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = "blue",
+     xlab = "月份",
+     ylab = "進站人次",
+     main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線總運量'),
+     ylim = c(min(tpass) * 0.9, max(transport_volume) * 1.1)
+     )
+
+lines(x = month.from:month.to,
+      y = tpass,
+      type = "o",
+      lwd = 2,
+      pch = 16,
+      col = "red"
+      )
+
+lines(x = month.from:month.to,
+      y = transport_volume - tpass,
+      type = "o",
+      lwd = 2,
+      pch = 16,
+      col = "darkgreen"
+      )
+
+grid()  # 網格線
+
+# 圖例
+legend("topright", 
+       legend = c("總運量", "TPass旅客", "其他旅客"), 
+       col = c("blue", "red", "darkgreen"), 
+       lwd = 2, 
+       pch = 16,
+       bty = "n",
+       inset = c(-0.25, 0),
+       xpd = TRUE
+       )
 ```
 
 
+```{r}
+# 整理日期，找出星期幾
+buses = names(df[[1]])
+for (month_index in months){
+  for (bus_index in buses){
+    df[[month_index]][[bus_index]] <- df[[month_index]][[bus_index]] |> mutate(Weekday = weekdays(ymd_hms(BoardingTime)))
+  }
+}
 
-
+df_summary = data_summary(df)
+```
 
 
 
