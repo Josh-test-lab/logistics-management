@@ -239,8 +239,8 @@ plot(x = month.from:month.to,
      pch = 16,
      col = "blue",
      xlab = "月份",
-     ylab = "進站人次",
-     main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線總運量'),
+     ylab = "乘車人次",
+     main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線乘車人次折線圖'),
      ylim = c(min(transport_volume) * 0.9, max(transport_volume) * 1.1)
      )
 
@@ -264,6 +264,74 @@ legend("topright",
        inset = c(-0.25, 0),
        xpd = TRUE
        )
+```
+
+```{r}
+# TPASS 運量
+bus = '301'
+transport_volume = NULL
+tpass = NULL
+
+for (month_index in months){
+  transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
+  tpass = c(tpass, df_summary[[month_index]][[bus]][['SubTicketType']][[2]][1] + df_summary[[month_index]][[bus]][['SubTicketType']][[2]][2])
+}
+
+windowsFonts(kai = windowsFont("DFKai-SB"))
+par(family = "kai", mar = c(5, 4, 4, 7))  # 字體與圖寬
+plot(x = month.from:month.to,
+     y = transport_volume,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = "blue",
+     xlab = "月份",
+     ylab = "乘車人次",
+     main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線乘車人次折線圖'),
+     ylim = c(min(tpass) * 0.9, max(transport_volume) * 1.1)
+     )
+
+lines(x = month.from:month.to,
+      y = tpass,
+      type = "o",
+      lwd = 2,
+      pch = 16,
+      col = "red"
+      )
+
+lines(x = month.from:month.to,
+      y = transport_volume - tpass,
+      type = "o",
+      lwd = 2,
+      pch = 16,
+      col = "darkgreen"
+      )
+
+grid()  # 網格線
+
+# 圖例
+legend("topright", 
+       legend = c("總運量", "TPASS旅客", "其他旅客"), 
+       col = c("blue", "red", "darkgreen"), 
+       lwd = 2, 
+       pch = 16,
+       bty = "n",
+       inset = c(-0.25, 0),
+       xpd = TRUE
+       )
+```
+
+
+```{r}
+# 整理日期，找出星期幾
+buses = names(df[[1]])
+for (month_index in months){
+  for (bus_index in buses){
+    df[[month_index]][[bus_index]] <- df[[month_index]][[bus_index]] |> mutate(Weekday = weekdays(ymd_hms(BoardingTime)))
+  }
+}
+
+df_summary = data_summary(df)
 ```
 
 ```{r}
@@ -311,7 +379,7 @@ grid()  # 網格線
 
 # 圖例
 legend("topright", 
-       legend = c("總運量", "TPass旅客", "其他旅客"), 
+       legend = c("總運量", "TPASS旅客", "其他旅客"), 
        col = c("blue", "red", "darkgreen"), 
        lwd = 2, 
        pch = 16,
@@ -323,20 +391,25 @@ legend("topright",
 
 
 ```{r}
-# 整理日期，找出星期幾
-buses = names(df[[1]])
-for (month_index in months){
-  for (bus_index in buses){
-    df[[month_index]][[bus_index]] <- df[[month_index]][[bus_index]] |> mutate(Weekday = weekdays(ymd_hms(BoardingTime)))
-  }
-}
+library(lubridate)
 
-df_summary = data_summary(df)
+# 年月
+year <- 2023
+month <- 5
+
+# 建立該月所有日期
+dates <- seq(ymd(sprintf("%d-%02d-01", year, month)), 
+             ceiling_date(ymd(sprintf("%d-%02d-01", year, month)), "month") - days(1),
+             by = "day")
+
+# 判斷是否為週末
+is_weekend <- wday(dates) %in% c(1, 7)  # 1: Sunday, 7: Saturday
+
+# 用 table 統計
+result <- table(ifelse(is_weekend, "假日", "平日"))
+print(result)
+
 ```
-
-
-
-
 
 
 
