@@ -470,7 +470,7 @@ weekend_and_weekday_volume_plot(bus)
 # 儲存圖片
 path = paste0("images/", bus, "/line_chart")
 check_path(path)
-png(filename = paste0(path, "/weekend_and_weekday_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
+png(filename = paste0(path, "/weekend_and_weekday_average_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
 weekend_and_weekday_volume_plot(bus)
 dev.off()
 ```
@@ -540,7 +540,80 @@ print(p)
 #ggsave("ridership_plot.jpg", plot = p, width = 8, height = 5, dpi = 300)
 ```
 
+```{r}
+# TPASS 日均運量
+tpass_volume_plot <- function(bus) {
+  transport_volume = NULL
+  tpass = NULL
+  month.days = NULL
+  
+  for (month_index in months){
+    transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
+    tpass = c(tpass, df_summary[[month_index]][[bus]][['SubTicketType']][[2]][1] + df_summary[[month_index]][[bus]][['SubTicketType']][[2]][2])
+  }
+  for (month_index in month.from:month.to){
+    month.days = c(month.days, sum(week.days))
+  }
+  month.volume.per_day = transport_volume / month.days
+  tpass.volume.per_day = tpass / month.days
+  
+  par(family = "kai", mar = c(5, 4, 4, 7))  # 字體與圖寬
+  
+  plot(x = month.from:month.to,
+       y = month.volume.per_day,
+       type = "o",
+       lwd = 2,
+       pch = 16,
+       col = "blue",
+       xlab = "月份",
+       ylab = "日均人次",
+       main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均乘車人次折線圖'),
+       ylim = c(min(tpass.volume.per_day) * 0.9, max(month.volume.per_day) * 1.1)
+       )
+  
+  lines(x = month.from:month.to,
+        y = tpass.volume.per_day,
+        type = "o",
+        lwd = 2,
+        pch = 16,
+        col = "red"
+        )
+  
+  lines(x = month.from:month.to,
+        y = month.volume.per_day - tpass.volume.per_day,
+        type = "o",
+        lwd = 2,
+        pch = 16,
+        col = "darkgreen"
+        )
+  
+  grid()  # 網格線
+  
+  # 圖例
+  legend("topright", 
+         legend = c("月日均", "TPASS旅客", "其他旅客"), 
+         col = c("blue", "red", "darkgreen"), 
+         lwd = 2, 
+         pch = 16,
+         bty = "n",
+         inset = c(-0.25, 0),
+         xpd = TRUE
+         )
+}
 
+# 車輛
+bus = '301'
+
+# 繪圖 (在 R中呈現)
+tpass_volume_plot(bus)
+
+# 儲存圖片
+path = paste0("images/", bus, "/line_chart")
+check_path(path)
+png(filename = paste0(path, "/tpass_average_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
+tpass_volume_plot(bus)
+dev.off()
+```
 
 
 
