@@ -131,7 +131,7 @@ check_path <- function(path) {
 ```{r}
 # config
 year = 2024  # 西元
-month.from = 6
+month.from = 7
 month.to = 12
 windowsFonts(kai = windowsFont("DFKai-SB"))
 
@@ -164,6 +164,8 @@ close(pb)
 end_time = Sys.time()
 
 print(paste0('Cost time: ', end_time - start_time, ' seconds'))
+
+buses = names(df[[1]])
 
 # 檢視前幾筆資料
 head(df[[1]][[1]])
@@ -294,17 +296,21 @@ volume_plot <- function(bus) {
 }
 
 # 車輛
-bus = '301'
-
+#bus = '301'
+for (bus in buses){
+  
 # 繪圖 (在 R中呈現)
-volume_plot(bus)
-
+  volume_plot(bus)
+  
 # 儲存圖片
-path = paste0("images/", bus, "/line_chart")
-check_path(path)
-png(filename = paste0(path, "/volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
-volume_plot(bus)
-dev.off()
+  path = paste0("images/", bus, "/line_chart")
+  check_path(path)
+  png(filename = paste0(path, "/volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
+  volume_plot(bus)
+  dev.off()
+}
+
+
 ```
 
 ```{r}
@@ -363,23 +369,24 @@ tpass_volume_plot <- function(bus) {
 }
 
 # 車輛
-bus = '301'
+#bus = '301'
+for (bus in buses){
 
 # 繪圖 (在 R中呈現)
-tpass_volume_plot(bus)
-
+  tpass_volume_plot(bus)
+  
 # 儲存圖片
-path = paste0("images/", bus, "/line_chart")
-check_path(path)
-png(filename = paste0(path, "/tpass_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
-tpass_volume_plot(bus)
-dev.off()
+  path = paste0("images/", bus, "/line_chart")
+  check_path(path)
+  png(filename = paste0(path, "/tpass_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
+  tpass_volume_plot(bus)
+  dev.off()
+}
 ```
 
 
 ```{r}
 # 整理日期，找出星期幾
-buses = names(df[[1]])
 for (month_index in months){
   for (bus_index in buses){
     df[[month_index]][[bus_index]] <- df[[month_index]][[bus_index]] |> mutate(Weekday = weekdays(ymd_hms(BoardingTime)))
@@ -387,6 +394,84 @@ for (month_index in months){
 }
 
 df_summary = data_summary(df)
+```
+
+```{r}
+# TPASS 日均運量
+tpass_volume_plot <- function(bus) {
+  transport_volume = NULL
+  tpass = NULL
+  month.days = NULL
+  
+  for (month_index in months){
+    transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
+    tpass = c(tpass, df_summary[[month_index]][[bus]][['SubTicketType']][[2]][1] + df_summary[[month_index]][[bus]][['SubTicketType']][[2]][2])
+  }
+  for (month_index in month.from:month.to){
+    week.days = monthly_weekday_and_weekend(year = year, month = month_index)[['Freq']]
+    month.days = c(month.days, sum(week.days))
+  }
+  month.volume.per_day = transport_volume / month.days
+  tpass.volume.per_day = tpass / month.days
+  
+  par(family = "kai", mar = c(5, 4, 4, 7))  # 字體與圖寬
+  
+  plot(x = month.from:month.to,
+       y = month.volume.per_day,
+       type = "o",
+       lwd = 2,
+       pch = 16,
+       col = "blue",
+       xlab = "月份",
+       ylab = "日均人次",
+       main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均乘車人次折線圖'),
+       ylim = c(min(tpass.volume.per_day) * 0.9, max(month.volume.per_day) * 1.1)
+       )
+  
+  lines(x = month.from:month.to,
+        y = tpass.volume.per_day,
+        type = "o",
+        lwd = 2,
+        pch = 16,
+        col = "red"
+        )
+  
+  lines(x = month.from:month.to,
+        y = month.volume.per_day - tpass.volume.per_day,
+        type = "o",
+        lwd = 2,
+        pch = 16,
+        col = "darkgreen"
+        )
+  
+  grid()  # 網格線
+  
+  # 圖例
+  legend("topright", 
+         legend = c("月日均", "TPASS旅客", "其他旅客"), 
+         col = c("blue", "red", "darkgreen"), 
+         lwd = 2, 
+         pch = 16,
+         bty = "n",
+         inset = c(-0.25, 0),
+         xpd = TRUE
+         )
+}
+
+# 車輛
+#bus = '301'
+for (bus in buses){
+
+# 繪圖 (在 R中呈現)
+  tpass_volume_plot(bus)
+
+# 儲存圖片
+  path = paste0("images/", bus, "/line_chart")
+  check_path(path)
+  png(filename = paste0(path, "/tpass_average_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
+  tpass_volume_plot(bus)
+  dev.off()
+}
 ```
 
 ```{r}
@@ -462,117 +547,112 @@ weekend_and_weekday_volume_plot <- function(bus) {
 }
 
 # 車輛
-bus = '301'
+#bus = '301'
+for (bus in buses){
 
 # 繪圖 (在 R中呈現)
-weekend_and_weekday_volume_plot(bus)
+  weekend_and_weekday_volume_plot(bus)
 
 # 儲存圖片
-path = paste0("images/", bus, "/line_chart")
-check_path(path)
-png(filename = paste0(path, "/weekend_and_weekday_average_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
-weekend_and_weekday_volume_plot(bus)
-dev.off()
-```
-
-
-```{r}
-# 平假日乘車人次 (ggplot2)
-bus = '301'
-weekend.days = NULL
-weekday.days = NULL
-month.days = NULL
-weekend.volume = NULL
-weekday.volume = NULL
-month.volume = NULL
-
-for (month_index in month.from:month.to){
-  week.days = monthly_weekday_and_weekend(year = year, month = month_index)[['Freq']]
-  weekday.days = c(weekday.days, week.days[1])
-  weekend.days = c(weekend.days, week.days[2])
-  month.days = c(month.days, sum(week.days))
-  
-  week.volume = df_summary[[sprintf("%04d%02d", year, month_index)]][[bus]][['Weekday']]
-  weekday.volume = c(weekday.volume, sum(week.volume$n[week.volume$Weekday %in% c("星期一", "星期二", "星期三", "星期四", "星期五")]))
-  weekend.volume = c(weekend.volume, sum(week.volume$n[week.volume$Weekday %in% c("星期六", "星期日")]))
-  month.volume = c(month.volume, sum(week.volume$n))
+  path = paste0("images/", bus, "/line_chart")
+  check_path(path)
+  png(filename = paste0(path, "/weekend_and_weekday_average_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
+  weekend_and_weekday_volume_plot(bus)
+  dev.off()
 }
-
-weekday.volume.per_day = weekday.volume / weekday.days
-weekend.volume.per_day = weekend.volume / weekend.days
-month.volume.per_day = month.volume / month.days
-
-plot_df <- data.frame(
-  月份 = month.from:month.to,
-  月日均 = month.volume.per_day,
-  平日 = weekday.volume.per_day,
-  假日 = weekend.volume.per_day
-) %>% pivot_longer(cols = -月份, names_to = "類別", values_to = "人次")
-
-p <- ggplot(plot_df, aes(x = 月份, y = 人次, color = 類別)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 3) +
-  scale_color_manual(values = c("月日均" = "blue", "平日" = "red", "假日" = "darkgreen")) +
-  labs(
-    x = "月份",
-    y = "日均人次",
-    title = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均乘車人次折線圖'),
-    color = NULL
-  ) +
-  scale_x_continuous(
-    breaks = plot_df$月份
-  ) +
-  scale_y_continuous(
-    breaks = pretty(c(min(plot_df$人次), max(plot_df$人次))),
-    limits = c(min(plot_df$人次), max(plot_df$人次)),
-    expand = expansion(mult = c(0.05, 0.05))
-  ) +
-  theme_minimal(base_family = "kai") +
-  theme(
-    text = element_text(size = 14),
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    legend.position = "right"
-  )
-
-print(p)
-
-# 儲存
-#ggsave("ridership_plot.jpg", plot = p, width = 8, height = 5, dpi = 300)
 ```
 
 ```{r}
-# TPASS 日均運量
-tpass_volume_plot <- function(bus) {
+# # 平假日乘車人次 (ggplot2)
+# bus = '301'
+# weekend.days = NULL
+# weekday.days = NULL
+# month.days = NULL
+# weekend.volume = NULL
+# weekday.volume = NULL
+# month.volume = NULL
+# 
+# for (month_index in month.from:month.to){
+#   week.days = monthly_weekday_and_weekend(year = year, month = month_index)[['Freq']]
+#   weekday.days = c(weekday.days, week.days[1])
+#   weekend.days = c(weekend.days, week.days[2])
+#   month.days = c(month.days, sum(week.days))
+#   
+#   week.volume = df_summary[[sprintf("%04d%02d", year, month_index)]][[bus]][['Weekday']]
+#   weekday.volume = c(weekday.volume, sum(week.volume$n[week.volume$Weekday %in% c("星期一", "星期二", "星期三", "星期四", "星期五")]))
+#   weekend.volume = c(weekend.volume, sum(week.volume$n[week.volume$Weekday %in% c("星期六", "星期日")]))
+#   month.volume = c(month.volume, sum(week.volume$n))
+# }
+# 
+# weekday.volume.per_day = weekday.volume / weekday.days
+# weekend.volume.per_day = weekend.volume / weekend.days
+# month.volume.per_day = month.volume / month.days
+# 
+# plot_df <- data.frame(
+#   月份 = month.from:month.to,
+#   月日均 = month.volume.per_day,
+#   平日 = weekday.volume.per_day,
+#   假日 = weekend.volume.per_day
+# ) %>% pivot_longer(cols = -月份, names_to = "類別", values_to = "人次")
+# 
+# p <- ggplot(plot_df, aes(x = 月份, y = 人次, color = 類別)) +
+#   geom_line(size = 1.2) +
+#   geom_point(size = 3) +
+#   scale_color_manual(values = c("月日均" = "blue", "平日" = "red", "假日" = "darkgreen")) +
+#   labs(
+#     x = "月份",
+#     y = "日均人次",
+#     title = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均乘車人次折線圖'),
+#     color = NULL
+#   ) +
+#   scale_x_continuous(
+#     breaks = plot_df$月份
+#   ) +
+#   scale_y_continuous(
+#     breaks = pretty(c(min(plot_df$人次), max(plot_df$人次))),
+#     limits = c(min(plot_df$人次), max(plot_df$人次)),
+#     expand = expansion(mult = c(0.05, 0.05))
+#   ) +
+#   theme_minimal(base_family = "kai") +
+#   theme(
+#     text = element_text(size = 14),
+#     plot.title = element_text(hjust = 0.5, face = "bold"),
+#     legend.position = "right"
+#   )
+# 
+# print(p)
+# 
+# # 儲存
+# #ggsave("ridership_plot.jpg", plot = p, width = 8, height = 5, dpi = 300)
+```
+
+```{r}
+# 太魯閣客運總運量
+total_volume_plot <- function(buses) {
   transport_volume = NULL
   tpass = NULL
-  month.days = NULL
   
   for (month_index in months){
     transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
     tpass = c(tpass, df_summary[[month_index]][[bus]][['SubTicketType']][[2]][1] + df_summary[[month_index]][[bus]][['SubTicketType']][[2]][2])
   }
-  for (month_index in month.from:month.to){
-    month.days = c(month.days, sum(week.days))
-  }
-  month.volume.per_day = transport_volume / month.days
-  tpass.volume.per_day = tpass / month.days
   
   par(family = "kai", mar = c(5, 4, 4, 7))  # 字體與圖寬
   
   plot(x = month.from:month.to,
-       y = month.volume.per_day,
+       y = transport_volume,
        type = "o",
        lwd = 2,
        pch = 16,
        col = "blue",
        xlab = "月份",
-       ylab = "日均人次",
-       main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均乘車人次折線圖'),
-       ylim = c(min(tpass.volume.per_day) * 0.9, max(month.volume.per_day) * 1.1)
+       ylab = "乘車人次",
+       main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線乘車人次折線圖'),
+       ylim = c(min(tpass) * 0.9, max(transport_volume) * 1.1)
        )
   
   lines(x = month.from:month.to,
-        y = tpass.volume.per_day,
+        y = tpass,
         type = "o",
         lwd = 2,
         pch = 16,
@@ -580,7 +660,7 @@ tpass_volume_plot <- function(bus) {
         )
   
   lines(x = month.from:month.to,
-        y = month.volume.per_day - tpass.volume.per_day,
+        y = transport_volume - tpass,
         type = "o",
         lwd = 2,
         pch = 16,
@@ -591,7 +671,7 @@ tpass_volume_plot <- function(bus) {
   
   # 圖例
   legend("topright", 
-         legend = c("月日均", "TPASS旅客", "其他旅客"), 
+         legend = c("總運量", "TPASS旅客", "其他旅客"), 
          col = c("blue", "red", "darkgreen"), 
          lwd = 2, 
          pch = 16,
@@ -601,19 +681,18 @@ tpass_volume_plot <- function(bus) {
          )
 }
 
-# 車輛
-bus = '301'
 
 # 繪圖 (在 R中呈現)
-tpass_volume_plot(bus)
+total_volume_plot(bus)
 
 # 儲存圖片
-path = paste0("images/", bus, "/line_chart")
+path = paste0("images/total/line_chart")
 check_path(path)
-png(filename = paste0(path, "/tpass_average_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
-tpass_volume_plot(bus)
+png(filename = paste0(path, "/total_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
+total_volume_plot(bus)
 dev.off()
 ```
+
 
 
 
