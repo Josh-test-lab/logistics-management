@@ -1,0 +1,101 @@
+library(readxl)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(showtext)
+
+#設定檔案路徑，假設所有 Excel 檔案都在這個資料夾
+folder_path <- "C:/Users/user/Desktop/運籌/普悠瑪客運"
+
+#取得所有 Excel 檔案名稱
+file_list <- list.files(path = folder_path, pattern = "\\.xlsx$", full.names = TRUE)
+
+#讀取每個 Excel 檔案，並提取欄位名稱
+df_list <- purrr::map(file_list, ~ read_excel(.))
+
+#取得所有檔案中的欄位名稱，並找到所有欄位的交集
+common_cols <- Reduce(intersect, lapply(df_list, names))
+
+#只選取每個資料框中存在的共同欄位，並合併
+df_list <- purrr::map(df_list, ~ .[common_cols])
+
+#使用 bind_rows() 合併所有資料框
+combined_df <- bind_rows(df_list)
+
+#檢視合併後的結果
+head(combined_df)
+table(combined_df$路線編號)
+table(combined_df$上車交易日期)
+
+#上車時間日期
+combined_df$上車日期 <- as.Date(combined_df$上車交易日期, format = "%Y%m%d")
+combined_df$上車年 <- format(combined_df$上車日期, "%Y")
+combined_df$上車月 <- format(combined_df$上車日期, "%m")
+combined_df$上車日 <- format(combined_df$上車日期, "%d")
+
+#下車時間日期
+combined_df$下車日期 <- as.Date(combined_df$下車交易日期, format = "%Y%m%d")
+combined_df$下車年 <- format(combined_df$下車日期, "%Y")
+combined_df$下車月 <- format(combined_df$下車日期, "%m")
+combined_df$下車日 <- format(combined_df$下車日期, "%d")
+
+#以路線區分
+route9801 <- combined_df[which(combined_df$路線編號 == "9801"),]
+route9803 <- combined_df[which(combined_df$路線編號 == "9803"),]
+route9805 <- combined_df[which(combined_df$路線編號 == "9805"),]
+route9806 <- combined_df[which(combined_df$路線編號 == "9806"),]
+
+#以年區分
+year2022 <- combined_df[which(combined_df$上車年 == "2022"),]
+year2023 <- combined_df[which(combined_df$上車年 == "2023"),]
+year2024 <- combined_df[which(combined_df$上車年 == "2024"),]
+
+
+#計算
+year_count <- combined_df %>% count(上車年, name = "數量") %>% filter(!is.na(上車年)) %>% mutate(上車年 = as.numeric(上車年) - 1911)
+
+#查看結果
+print(year_count)
+
+#繪圖
+## 字型設定: 標楷體
+windowsFonts(kai = windowsFont("DFKai-SB"))
+par(family = "kai", mar = c(4, 4, 4, 4))
+plot(x = year_count$上車年,
+     y = year_count$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     xlab = "年份",
+     ylab = "乘車人次",
+     main = "110-112年乘車人次折線圖",
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# x 軸
+axis(side = 1, at = seq(min(year_count$上車年), max(year_count$上車年)), labels = year_count$上車年, cex.axis = 1.5)
+
+# y 軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+##加上網格線
+grid()
+
+##點上方顯示數字
+text(x = year_count$上車年,
+     y = year_count$數量,
+     labels = year_count$數量,
+     pos = 2)
+
+
+
+
+
+
+
