@@ -119,6 +119,7 @@ monthly_weekday_and_weekend <- function(year, month){
   
   # output
   result <- table(ifelse(is_weekend, "weekend", "weekday")) %>% data.frame()
+  return(result)
 }
 
 check_path <- function(path) {
@@ -313,6 +314,7 @@ for (bus in buses){
 tpass_volume_plot <- function(bus) {
   transport_volume = NULL
   tpass = NULL
+  color <- rainbow(3)
   
   for (month_index in months){
     transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
@@ -326,7 +328,7 @@ tpass_volume_plot <- function(bus) {
        type = "o",
        lwd = 2,
        pch = 16,
-       col = "blue",
+       col = color[1],
        xlab = "月份",
        ylab = "乘車人次",
        main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線乘車人次折線圖'),
@@ -338,7 +340,7 @@ tpass_volume_plot <- function(bus) {
         type = "o",
         lwd = 2,
         pch = 16,
-        col = "red"
+        col = color[2]
         )
   
   lines(x = month.from:month.to,
@@ -346,7 +348,7 @@ tpass_volume_plot <- function(bus) {
         type = "o",
         lwd = 2,
         pch = 16,
-        col = "darkgreen"
+        col = color[3]
         )
   
   grid()  # 網格線
@@ -354,7 +356,7 @@ tpass_volume_plot <- function(bus) {
   # 圖例
   legend("topright", 
          legend = c("總運量", "TPASS旅客", "其他旅客"), 
-         col = c("blue", "red", "darkgreen"), 
+         col = color, 
          lwd = 2, 
          pch = 16,
          bty = "n",
@@ -397,6 +399,7 @@ tpass_volume_plot <- function(bus) {
   transport_volume = NULL
   tpass = NULL
   month.days = NULL
+  color <- rainbow(3)
   
   for (month_index in months){
     transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
@@ -416,7 +419,7 @@ tpass_volume_plot <- function(bus) {
        type = "o",
        lwd = 2,
        pch = 16,
-       col = "blue",
+       col = color[1],
        xlab = "月份",
        ylab = "日均人次",
        main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均乘車人次折線圖'),
@@ -428,7 +431,7 @@ tpass_volume_plot <- function(bus) {
         type = "o",
         lwd = 2,
         pch = 16,
-        col = "red"
+        col = color[2]
         )
   
   lines(x = month.from:month.to,
@@ -436,7 +439,7 @@ tpass_volume_plot <- function(bus) {
         type = "o",
         lwd = 2,
         pch = 16,
-        col = "darkgreen"
+        col = color[3]
         )
   
   grid()  # 網格線
@@ -444,7 +447,7 @@ tpass_volume_plot <- function(bus) {
   # 圖例
   legend("topright", 
          legend = c("月日均", "TPASS旅客", "其他旅客"), 
-         col = c("blue", "red", "darkgreen"), 
+         col = color, 
          lwd = 2, 
          pch = 16,
          bty = "n",
@@ -478,6 +481,7 @@ weekend_and_weekday_volume_plot <- function(bus) {
   weekend.volume = NULL
   weekday.volume = NULL
   month.volume = NULL
+  color <- rainbow(3)
   
   for (month_index in month.from:month.to){
     week.days = monthly_weekday_and_weekend(year = year, month = month_index)[['Freq']]
@@ -502,7 +506,7 @@ weekend_and_weekday_volume_plot <- function(bus) {
        type = "o",
        lwd = 2,
        pch = 16,
-       col = "blue",
+       col = color[1],
        xlab = "月份",
        ylab = "日均人次",
        main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均乘車人次折線圖'),
@@ -516,7 +520,7 @@ weekend_and_weekday_volume_plot <- function(bus) {
         type = "o",
         lwd = 2,
         pch = 16,
-        col = "red"
+        col = color[2]
         )
   
   lines(x = month.from:month.to,
@@ -524,7 +528,7 @@ weekend_and_weekday_volume_plot <- function(bus) {
         type = "o",
         lwd = 2,
         pch = 16,
-        col = "darkgreen"
+        col = color[3]
         )
   
   grid()  # 網格線
@@ -532,7 +536,7 @@ weekend_and_weekday_volume_plot <- function(bus) {
   # 圖例
   legend("topright", 
          legend = c("月日均", "平日日均", "假日日均"), 
-         col = c("blue", "red", "darkgreen"), 
+         col = color, 
          lwd = 2, 
          pch = 16,
          bty = "n",
@@ -624,51 +628,47 @@ for (bus in buses){
 ```{r}
 # 太魯閣客運總運量
 total_volume_plot <- function(buses) {
-  bus = buses[1]
-  colors <- rainbow(length(buses))
+  color <- rainbow(length(buses))
+  
   transport_volume = NULL
-  
-  for (month_index in months){
-    transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
+  for (bus in buses){
+    transport_each_volume = NULL
+    for (month_index in months){
+      transport_each_volume = c(transport_each_volume, nrow(df[[month_index]][[bus]]))
+    }
+    transport_volume = c(transport_volume, list(transport_each_volume))
   }
-  
+
   par(family = "kai", mar = c(5, 4, 4, 7))  # 字體與圖寬
   
   plot(x = month.from:month.to,
-       y = transport_volume,
+       y = transport_volume[[1]],
        type = "o",
        lwd = 2,
        pch = 16,
-       col = colors[1],
+       col = color[1],
        xlab = "月份",
        ylab = "乘車人次",
-       main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線乘車人次折線圖'),
-       ylim = c(min(transport_volume) * 0.9, max(transport_volume) * 1.1)
+       main = paste0(year - 1911, '年', month.from, '月至', month.to, '月太魯閣客運總運量'),
+       ylim = c(min(sapply(transport_volume, min)) * 0.9 , max(sapply(transport_volume, max)) * 1.1)
        )
   
   for(bus_index in 2:length(buses)){
-      bus = buses[bus_index]
-      transport_volume = NULL
-      for (month_index in months){
-        transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
-      }
-      
-      lines(x = month.from:month.to,
-        y = transport_volume,
-        type = "o",
-        lwd = 2,
-        pch = 16,
-        col = colors[bus_index]
-        )
+    lines(x = month.from:month.to,
+      y = transport_volume[[bus_index]],
+      type = "o",
+      lwd = 2,
+      pch = 16,
+      col = color[bus_index]
+      )
   }
 
-  
   grid()  # 網格線
   
   # 圖例
   legend("topright", 
          legend = buses, 
-         col = colors, 
+         col = color, 
          lwd = 2, 
          pch = 16,
          bty = "n",
@@ -679,13 +679,13 @@ total_volume_plot <- function(buses) {
 
 
 # 繪圖 (在 R中呈現)
-total_volume_plot(bus)
+total_volume_plot(buses)
 
 # 儲存圖片
 path = paste0("images/total/line_chart")
 check_path(path)
 png(filename = paste0(path, "/total_volume.png"), width = 8, height = 5, units = "in", res = 300, family = "kai")
-total_volume_plot(bus)
+total_volume_plot(buses)
 dev.off()
 ```
 

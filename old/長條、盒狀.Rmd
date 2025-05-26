@@ -1,0 +1,390 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+# csv打開中文正常，但R讀的異常
+檔案-匯出-變更檔案類型-令存心黨-檔案類型(utf-8)
+# 使用excel合併資料
+資料-取得資料-從檔案-從資料夾(一次合併多條路線、拉日期出來，就不用使用R合併)
+
+
+
+
+## 開始做前記得
+1. 檢查每月的資料都有
+2. 若是計費站，不能把同車站上下車資料刪去，要判斷是返程或是去程
+3. 跑完記得存下右上角的變數資料，若是要修改就不用重跑code
+## 用excel處理車序資料
+1. 把所有站名選取起來，按ctrl+G-特殊-空格，就可以把站名之間的空格選取起來刪掉
+2. 把1~9站名選取起來，按資料的資料剖析-固定寬度-下一步，就可以把站名、數字分開成2行
+
+ctrl+a+f9更新word圖片標號
+
+## Code
+1. na.omit(): delete the row which has NA element
+2. str_count(): compute the item in string, including punctuation marks and space
+3. paste0(): paste two item( number/strings/variables ) with no separator, different than paste() which can use separator
+4. substring(string,2,6): In string, generate a new string from 2-th item to 6-th item
+5. levels(): check the categorical element in factor vector
+6. str_detect(vector, pattern, negate): find pattern in vector and output T or F, negate=T means inverse the T to F.(need library(stringr))
+7. assign("b", value): let a new variable/data.frame/matrix called "b" with value
+8. dim(newdata)=vector consist of row number and colume number
+9. setdiff(x,y): find the element in vector x but not in y, change x,y the output will different
+
+
+
+
+# 更新版
+
+整理資料+畫圖
+```{r}
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(visdat)
+library(data.table)
+
+
+data1 <- fread("C:/Users/A413/Desktop/1139_11.csv")
+data2 <- fread("C:/Users/A413/Desktop/1139_12.csv")
+data3 <- fread("C:/Users/A413/Desktop/1139_13.csv")
+name <- fread("C:/Users/A413/Desktop/統聯109~111/花蓮花蓮客運/花蓮車序.csv")
+ticket <- fread("C:/Users/A413/Desktop/統聯109~111/花蓮花蓮客運/票種.csv")
+
+data1 = rbind(data1,data2)
+data1 = rbind(data1,data3)
+data1 = data1[which(substring(data1$上車時間,1,4)=="2023" ),]
+
+#挖掉na, 空白值
+data1 <- na.omit(data1)
+data1 = data1[which(data1$路線!=""& data1$票種名稱!=""& data1$上車時間!=""& data1$上車站名!=""& data1$下車時間!=""& data1$下車站名!=""),]
+
+data1$日期 = rep(0,length(data1$上車時間))
+
+#日期字串的長度不同，用日期跟時間之間的空格把日期單獨抓出來
+data1$日期 = substring(data1$上車時間, 1, str_locate(data1$上車時間, " ")[,1]-1 )
+
+# nchar可以算出字串長度
+data1$上車時間 = substring(data1$上車時間, str_locate(data1$上車時間, " ")[,1]+1, nchar(data1$上車時間) )
+data1$下車時間 = substring(data1$下車時間, str_locate(data1$下車時間, " ")[,1]+1, nchar(data1$下車時間) )
+
+#加上秒數00
+data1$上車時間 = paste0(data1$上車時間,":00")
+data1$下車時間 = paste0(data1$下車時間,":00")
+data1 = data1[,c(1,3,4,5,7,8,10,19)]
+data1 <- na.omit(data1)
+
+#設個原版，出錯可以從這裡重生
+newdata = data1
+p = dim(newdata)[1]#維度 - 列
+q = dim(newdata)[2]#變數 - 欄
+
+
+#####搭車時間#####
+#計算上車時間(單位改分鐘)
+Onhour = substring(newdata$上車時間,1,2)
+Onmin = substring(newdata$上車時間,4,5)
+Onsec = substring(newdata$上車時間,7,8)
+Onnmin = as.data.frame(as.numeric(Onhour)*60 + as.numeric(Onmin))
+#計算下車時間(單位改分鐘)
+Ofhour = substring(newdata$下車時間,1,2)
+Ofmin = substring(newdata$下車時間,4,5)
+Ofsec = substring(newdata$下車時間,7,8)
+Ofnmin = as.data.frame(as.numeric(Ofhour)*60 + as.numeric(Ofmin))
+
+colnames(Onnmin) <- "Onnmin"
+colnames(Ofnmin) <- "Ofnmin"
+newdata <- cbind(newdata,Onnmin)
+newdata <- cbind(newdata,Ofnmin)
+
+#計算搭乘時長
+time = abs(Onnmin - Ofnmin)
+time <- as.data.frame(time)
+colnames(time) = "time"
+newdata <- cbind(newdata,time)
+
+
+#####平日假日#####
+library(stringi)
+#造平日1假日0的向量
+week_day = ifelse(weekdays(as.Date(newdata$日期))=="星期六" |
+              weekdays(as.Date(newdata$日期))=="星期日" ,0,1 )
+
+week_day <- as.data.frame(week_day)
+colnames(week_day) <- "平日1週末0"
+newdata <- cbind(newdata, week_day)
+
+
+#####定義票種#####
+#setdiff(x,y): find the different element of vector x and y
+diffticket <- data.frame(交易票種 = setdiff(newdata$票種名稱,ticket$交易票種),票種 = NA)
+
+diffticket$票種[which(str_detect(diffticket$交易票種, pattern = "一般", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "普通", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "全票", negate = FALSE)|
+                                                    diffticket$交易票種=="愛金卡-普卡")] <- "一般票"
+
+diffticket$票種[which(str_detect(diffticket$交易票種, pattern = "敬老", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "原住民", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "博愛", negate = FALSE))] <- "敬老票"
+
+diffticket$票種[which(str_detect(diffticket$交易票種, pattern = "學生", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "高市仁愛", negate = FALSE))] <- "學生票"
+
+diffticket$票種[which(str_detect(diffticket$交易票種, pattern = "優待", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "兒童", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "優惠", negate = FALSE))] <- "優待票"
+
+diffticket$票種[which(str_detect(diffticket$交易票種, pattern = "愛心", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "陪伴", negate = FALSE)|
+                                                    diffticket$交易票種=="悠遊-愛陪")] <- "陪伴票"
+
+diffticket$票種[which(str_detect(diffticket$交易票種, pattern = "199", negate = FALSE)|
+                      str_detect(diffticket$交易票種, pattern = "399", negate = FALSE)|
+                      diffticket$交易票種=="花蓮全區公路客運＋全區臺鐵"|
+                      diffticket$交易票種=="臺東全區公路+臺鐵"|
+                      diffticket$交易票種=="台東區"|
+                      diffticket$交易票種=="花蓮區大"|
+                      diffticket$交易票種=="花蓮大"|
+                      diffticket$交易票種=="台東通勤月票")] <- "月票"
+
+
+colnames(newdata)[2] <- "交易票種"
+ticket <- rbind(ticket,diffticket)
+#把交易票種轉換成相對應的票種
+newdata <-merge(newdata , ticket , by = "交易票種") 
+newdata = as.data.frame(newdata[,c(2,13,8,4,9,5,8,6,10,7,12,11)])
+colnames(newdata) = c("路線","票種","上車日期","上車時間","上車分鐘","上車站名","下車日期","下車時間","下車分鐘","下車站名","星期","乘坐分鐘")
+newdata = newdata[order(newdata$上車日期),]
+#存資料做不同年的搭乘數
+newdata$路線 = "1139"
+fwrite(newdata, "C:/Users/A413/Desktop/折線圖資料/1139_112.csv")
+test = fread("C:/Users/A413/Desktop/折線圖資料/1139_112.csv")
+
+nameg <- name[1:length(name$n1139),3:4]
+colnames(nameg) <- c("上車站名","上車站序")
+nameb <- name[1:length(name$n1139),3:4]
+colnames(nameb) <- c("下車站名","下車站序")
+newdata<-merge(newdata,nameg,by = "上車站名")
+newdata<-merge(newdata,nameb,by = "下車站名")
+
+newdata <- relocate(newdata,上車站序, .after = 上車分鐘)
+newdata <- relocate(newdata,上車站名, .after = 上車站序)
+newdata <- relocate(newdata,下車站序, .after = 下車分鐘)
+newdata <- relocate(newdata,下車站名, .after = 下車站序)
+gnewdata <- newdata[which(as.numeric(newdata$上車站序) - as.numeric(newdata$下車站序) < 0), ]
+bnewdata <- newdata[which(as.numeric(newdata$上車站序) - as.numeric(newdata$下車站序) > 0), ]
+
+gnewdata$票種 <- factor(gnewdata$票種,levels = c("一般票","陪伴票","敬老票", "學生票" ,"優待票","月票"))
+bnewdata$票種 <- factor(bnewdata$票種,levels = c("一般票","陪伴票","敬老票", "學生票" ,"優待票","月票"))
+newdata$票種 <- factor(newdata$票種,levels = c("一般票","陪伴票","敬老票", "學生票" ,"優待票","月票"))
+
+fwrite(gnewdata, "C:/Users/A413/Desktop/折線圖資料/1121_112g.csv")
+fwrite(bnewdata, "C:/Users/A413/Desktop/折線圖資料/1121_112b.csv")
+test1 = fread("C:/Users/A413/Desktop/折線圖資料/1121_112g.csv")
+test1 = fread("C:/Users/A413/Desktop/折線圖資料/1121_112b.csv")
+
+
+
+
+
+
+
+#####畫圖分析#####
+library(datasets)
+library(cluster)
+library(stringr)
+library(ggplot2)
+setwd("C:/Users/A413/Desktop/112/1121")
+
+
+
+
+#票種長條圖
+qplot(x = 票種, data = newdata, geom = "bar", main = "112年1121路線搭車票種", xlab = "票種", fill = 票種) + 
+  scale_fill_grey() + 
+  geom_text(stat="count",aes(label=paste0(round(..count..*100/sum(..count..)),"%" )),vjust=-0.2) #圖形=bar 複合式的長條圖
+ggsave("112年1121路線搭車票種.jpeg", height = 8.25,width = 13.79)
+qplot(x = 票種, data = gnewdata, geom = "bar", main = "112年1121路線去程搭車票種", xlab = "票種", fill = 票種) + 
+  scale_fill_grey() + 
+  geom_text(stat="count",aes(label=paste0(round(..count..*100/sum(..count..)),"%" )),vjust=-0.2) #圖形=bar 複合式的長條圖
+ggsave("112年1121路線去程搭車票種.jpeg", height = 8.25,width = 13.79)
+qplot(x = 票種, data = bnewdata, geom = "bar", main = "112年1121路線回程搭車票種", xlab = "票種", fill = 票種) + 
+  scale_fill_grey() + 
+  geom_text(stat="count",aes(label=paste0(round(..count..*100/sum(..count..)),"%" )),vjust=-0.2) #圖形=bar 複合式的長條圖
+ggsave("112年1121路線回程搭車票種.jpeg", height = 8.25,width = 13.79)
+
+#因應不同路線用站名name的不同行
+a1 <- name[,1]
+a1 = a1[which(a1!=""),]
+b1 <- name[,1]
+b1 = b1[which(b1!=""),]
+
+#去程上車分鐘票種點圖
+ggplot(gnewdata, aes(factor(上車站名,levels=a1$r1121, ordered = TRUE), 上車分鐘, color = 票種)) + 
+  geom_point() + ggtitle("112年路線1121(去程)上車站點-上車分鐘票種點圖") + 
+  ylab("上車分鐘") + xlab("1121站點") + 
+  scale_color_manual(values=c("#00DDFF","#DA70D6","#50C878","#4d8f13","#6495ED","#FF4D00","#FFD000")) + 
+  theme(panel.background = element_rect(fill = 'transparent', color = "gray"), axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5, color = "black", size = 9))
+ggsave("112年路線1121(去程)上車站點-上車分鐘票種點圖.jpeg", height = 8.25,width = 13.79)
+#返程上車分鐘票種點圖
+ggplot(bnewdata, aes(factor(上車站名,levels=rev(b1$r1121)), 上車分鐘, color = 票種)) + 
+  geom_point() + ggtitle("112年路線1121(返程)上車站點-上車分鐘票種點圖") + 
+  ylab("上車分鐘") + xlab("1121站點") + 
+  scale_color_manual(values=c("#00DDFF","#DA70D6","#50C878","#4d8f13","#6495ED","#FF4D00","#FFD000")) + 
+  theme(panel.background = element_rect(fill = 'transparent', color = "gray"), axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5, color = "black", size = 9))
+ggsave("112年1121(返程)上車站點-上車分鐘票種點圖.jpeg", height = 8.25,width = 13.79)
+
+#分平日假日，平日1週末0
+gnewdataa <- gnewdata[which(gnewdata$星期 == "1"),]
+gnewdatab <- gnewdata[which(gnewdata$星期 == "0"),]
+bnewdataa <- bnewdata[which(bnewdata$星期 == "1"),]
+bnewdatab <- bnewdata[which(bnewdata$星期 == "0"),]
+
+table(gnewdataa$票種)
+table(gnewdatab$票種)
+table(bnewdataa$票種)
+table(bnewdatab$票種)
+
+
+#去程平日直方圖
+ggplot(gnewdataa, aes(y = factor(上車站名,levels=rev(a1$r1121)))) +
+  geom_bar(aes(fill = 票種), colour = "black") +
+  scale_fill_grey() + # 使用灰階配色
+  theme_bw()+
+  labs(x="數量", y="站點名稱", title="112年1121[花蓮火車站─光復]去程平日]-各上車站點票種直方疊圖") +
+  theme(text = element_text(size = 12,  face="bold"),plot.title = element_text(hjust = 0.5))
+ggsave("112年1121[花蓮火車站─光復]去程平日]-各上車站點票種直方疊圖.jpeg", height = 8.25,width = 13.79)
+#去程假日直方圖
+ggplot(gnewdatab, aes(y = factor(上車站名,levels=rev(a1$r1121)))) + 
+  geom_bar(aes(fill = 票種), colour = "black") +
+  scale_fill_grey() + # 使用灰階配色
+  theme_bw()+
+  labs(x="數量", y="站點名稱", title="112年1121[花蓮火車站─光復]去程假日]-各上車站點票種直方疊圖") +
+  theme(text = element_text(size = 12,  face="bold"),plot.title = element_text(hjust = 0.5))
+ggsave("112年1121[花蓮火車站─光復]去程假日]-各上車站點票種直方疊圖.jpeg", height = 8.25,width = 13.79)
+#返程平日直方圖
+ggplot(bnewdataa, aes(y = factor(上車站名,levels=rev(rev(b1$r1121))))) +
+  geom_bar(aes(fill = 票種), colour = "black") +
+  scale_fill_grey() + # 使用灰階配色
+  theme_bw()+
+  labs(x="數量", y="站點名稱", title="112年1121[花蓮火車站─光復]返程平日]-各上車站點票種直方疊圖") +
+  theme(text = element_text(size = 12,  face="bold"),plot.title = element_text(hjust = 0.5))
+ggsave("112年1121[花蓮火車站─光復]返程平日]-各上車站點票種直方疊圖.jpeg", height = 8.25,width = 13.79)
+#返程假日直方圖
+ggplot(bnewdatab, aes(y = factor(上車站名,levels=rev(rev(b1$r1121))))) + 
+  geom_bar(aes(fill = 票種), colour = "black") +
+  scale_fill_grey() + # 使用灰階配色
+  theme_bw()+
+  labs(x="數量", y="站點名稱", title="112年1121[花蓮火車站─光復]返程假日]-各上車站點票種直方疊圖") +
+  theme(text = element_text(size = 12,  face="bold"),plot.title = element_text(hjust = 0.5))
+ggsave("112年1121[花蓮火車站─光復]返程假日]-各上車站點票種直方疊圖.jpeg", height = 8.25,width = 13.79)
+
+
+
+####熱門站點分析####
+# 先判斷熱門站點
+sort(table(gnewdataa$上車站名),decreasing = T)
+sort(table(gnewdatab$上車站名),decreasing = T)
+sort(table(bnewdataa$上車站名),decreasing = T)
+sort(table(bnewdatab$上車站名),decreasing = T)
+#去程平日
+cityGa <- subset(gnewdataa,gnewdataa$上車站名 == "花蓮火車站"| gnewdataa$上車站名 == "中華站"| gnewdataa$上車站名 == "林榮"| gnewdataa$上車站名 == "中正站"| gnewdataa$上車站名 == "鳳林"| gnewdataa$上車站名 == "東華大學")
+#去程假日
+cityGb <- subset(gnewdatab,gnewdatab$上車站名 == "花蓮火車站"| gnewdatab$上車站名 == "中華站"| gnewdatab$上車站名 == "林榮"| gnewdatab$上車站名 == "中正站"| gnewdatab$上車站名 == "壽豐車站")
+#返程平日
+cityBa <- subset(bnewdataa,bnewdataa$上車站名 == "光復站"| bnewdataa$上車站名 == "志學"| bnewdataa$上車站名 == "東華大學"| bnewdataa$上車站名 == "豐田"| bnewdataa$上車站名 == "鳳林"| bnewdataa$上車站名 == "壽豐車站")
+#返程假日
+cityBb <- subset(bnewdataa,bnewdataa$上車站名 == "光復站"| bnewdataa$上車站名 == "東華大學"| bnewdataa$上車站名 == "志學"| bnewdataa$上車站名 == "鳳林"| bnewdataa$上車站名 == "壽豐車站")
+
+#去程平日直方圖
+ggplot(cityGa, aes(y = factor(下車站名,levels=rev(a1$r1121)))) +
+  geom_bar(aes(fill = 票種), colour = "black") +
+  scale_fill_grey() + # 使用灰階配色
+  theme_bw()+
+  labs(x="數量", y="站點名稱", title="112年1121[花蓮火車站─光復]去程平日]-熱門站點下車站點票種直方疊圖") +
+  theme(text = element_text(size = 12,  face="bold"),plot.title = element_text(hjust = 0.5))
+ggsave("112年1121[花蓮火車站─光復]去程平日]-熱門站點下車站點票種直方疊圖.jpeg", height = 8.25,width = 13.79)
+#去程假日直方圖
+ggplot(cityGb, aes(y = factor(下車站名,levels=rev(a1$r1121)))) + 
+  geom_bar(aes(fill = 票種), colour = "black") +
+  scale_fill_grey() + # 使用灰階配色
+  theme_bw()+
+  labs(x="數量", y="站點名稱", title="112年1121[花蓮火車站─光復]去程假日]-熱門站點下車站點票種直方疊圖") +
+  theme(text = element_text(size = 12,  face="bold"),plot.title = element_text(hjust = 0.5))
+ggsave("112年1121[花蓮火車站─光復]去程假日]-熱門站點下車站點票種直方疊圖.jpeg", height = 8.25,width = 13.79)
+#返程平日直方圖
+ggplot(cityBa, aes(y = factor(下車站名,levels=rev(rev(b1$r1121))))) + 
+  geom_bar(aes(fill = 票種), colour = "black") +
+  scale_fill_grey() + # 使用灰階配色
+  theme_bw()+
+  labs(x="數量", y="站點名稱", title="112年1121[花蓮火車站─光復]返程平日]-熱門站點下車站點票種直方疊圖") +
+  theme(text = element_text(size = 12,  face="bold"),plot.title = element_text(hjust = 0.5))
+ggsave("112年1121[花蓮火車站─光復]返程平日]-熱門站點下車站點票種直方疊圖.jpeg", height = 8.25,width = 13.79)
+#返程假日直方圖
+ggplot(cityBb, aes(y = factor(下車站名,levels=rev(rev(b1$r1121))))) +
+  geom_bar(aes(fill = 票種), colour = "black") +
+  scale_fill_grey() + # 使用灰階配色
+  theme_bw()+
+  labs(x="數量", y="站點名稱", title="112年1121[花蓮火車站─光復]返程假日]-熱門站點下車站點票種直方疊圖") +
+  theme(text = element_text(size = 12,  face="bold"),plot.title = element_text(hjust = 0.5))
+ggsave("112年1121[花蓮火車站─光復]返程假日]-熱門站點下車站點票種直方疊圖.jpeg", height = 8.25,width = 13.79)
+
+
+#去程平日盒狀圖
+ggplot(cityGa, aes(y = factor(上車站名,levels=rev(a1$r1121)), x = 乘坐分鐘)) + geom_boxplot() + 
+  ggtitle("112年1121[花蓮火車站─光復]去程平日]上車站點-乘坐分鐘盒狀圖") + ylab("站點名稱") + xlab("乘坐分鐘") + theme(panel.background = element_rect(fill = "white", colour = "gray"), panel.grid.major=element_line(colour='#EDEDED'), plot.title = element_text(colour = "black", face = "bold"), axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5, color = "black", size = 9))
+ggsave("112年1121[花蓮火車站─光復]去程平日]上車站點-乘坐分鐘盒狀圖.jpeg", height = 8.25,width = 13.79)
+#去程假日盒狀圖
+ggplot(cityGb, aes(y = factor(上車站名,levels=rev(a1$r1121)), x = 乘坐分鐘)) + geom_boxplot() + 
+  ggtitle("112年1121[花蓮火車站─光復]去程假日]上車站點-乘坐分鐘盒狀圖") + ylab("站點名稱") + xlab("乘坐分鐘") + theme(panel.background = element_rect(fill = "white", colour = "gray"), panel.grid.major=element_line(colour='#EDEDED'), plot.title = element_text(colour = "black", face = "bold"), axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5, color = "black", size = 9))
+ggsave("112年1121[花蓮火車站─光復]去程假日]上車站點-乘坐分鐘盒狀圖.jpeg", height = 8.25,width = 13.79)
+#返程平日盒狀圖
+ggplot(cityBa, aes(y = factor(上車站名,levels=rev(rev(b1$r1121))), x = 乘坐分鐘)) + geom_boxplot() + 
+  ggtitle("112年1121[花蓮火車站─光復]返程平日]上車站點-乘坐分鐘盒狀圖") + ylab("站點名稱") + xlab("乘坐分鐘") + theme(panel.background = element_rect(fill = "white", colour = "gray"), panel.grid.major=element_line(colour='#EDEDED'), plot.title = element_text(colour = "black", face = "bold"), axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5, color = "black", size = 9))
+ggsave("112年1121[花蓮火車站─光復]返程平日]上車站點-乘坐分鐘盒狀圖.jpeg", height = 8.25,width = 13.79)
+#返程假日盒狀圖
+ggplot(cityBb, aes(y = factor(上車站名,levels=rev(rev(b1$r1121))), x = 乘坐分鐘)) + geom_boxplot() + 
+  ggtitle("112年1121[花蓮火車站─光復]返程假日]上車站點-乘坐分鐘盒狀圖") + ylab("站點名稱") + xlab("乘坐分鐘") + theme(panel.background = element_rect(fill = "white", colour = "gray"), panel.grid.major=element_line(colour='#EDEDED'), plot.title = element_text(colour = "black", face = "bold"), axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5, color = "black", size = 9))
+ggsave("112年1121[花蓮火車站─光復]返程假日]上車站點-乘坐分鐘盒狀圖.jpeg", height = 8.25,width = 13.79)
+
+
+#去程平日分面長條圖
+ggplot(cityGa, aes(x = 乘坐分鐘 , fill = 票種) ) + 
+  geom_histogram(bins = 50) + 
+  facet_wrap(~factor(上車站名, levels=a1$r1121),ncol = 3, scales = "free") + 
+  ggtitle("112年1121[花蓮火車站─光復]去程平日]上車站點-乘坐時間長條圖") + 
+  ylab("次數") + xlab("乘坐分鐘") + 
+  scale_fill_grey() + 
+  theme_bw() + theme(panel.background = element_rect(fill = "white", color = "gray"), panel.grid.major=element_line(colour='#EDEDED'), axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5, color = "black", size = 9), plot.title = element_text(colour = "black", face = "bold", size = 10))
+ggsave("112年1121[花蓮火車站─光復]去程平日]上車站點-乘坐時間長條圖.jpeg", height = 8.25,width = 13.79)
+#去程假日分面長條圖
+ggplot(cityGb, aes(x = 乘坐分鐘 , fill = 票種) ) + 
+  geom_histogram(bins = 50) + 
+  facet_wrap(~factor(上車站名, levels=a1$r1121),ncol = 3, scales = "free") + 
+  ggtitle("112年1121[花蓮火車站─光復]去程假日]上車站點-乘坐時間長條圖") + 
+  ylab("次數") + xlab("乘坐分鐘") + scale_fill_grey() + theme_bw() + theme(axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5, color = "black", size = 9), plot.title = element_text(colour = "black", face = "bold", size = 10))
+ggsave("112年1121[花蓮火車站─光復]去程假日]上車站點-乘坐時間長條圖.jpeg", height = 8.25,width = 13.79)
+#返程平日分面長條圖
+ggplot(cityBa, aes(x = 乘坐分鐘 , fill = 票種) ) + 
+  geom_histogram(bins = 50) + 
+  facet_wrap(~factor(上車站名, levels=rev(b1$r1121)),ncol = 3, scales = "free") + 
+  ggtitle("112年1121[花蓮火車站─光復]返程平日]上車站點-乘坐時間長條圖") + 
+  ylab("次數") + xlab("乘坐分鐘") + scale_fill_grey() + theme_bw() + theme(axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5, color = "black", size = 9), plot.title = element_text(colour = "black", face = "bold", size = 10))
+ggsave("112年1121[花蓮火車站─光復]返程平日]上車站點-乘坐時間長條圖.jpeg", height = 8.25,width = 13.79)
+#返程假日分面長條圖
+ggplot(cityBb, aes(x = 乘坐分鐘 , fill = 票種) ) + 
+  geom_histogram(bins = 50) + 
+  facet_wrap(~factor(上車站名, levels=rev(b1$r1121)),ncol = 3, scales = "free") + 
+  ggtitle("112年1121[花蓮火車站─光復]返程假日]上車站點-乘坐時間長條圖") + 
+  ylab("次數") + xlab("乘坐分鐘") + 
+  scale_fill_grey() + 
+  theme_bw() + theme(axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5, color = "black", size = 9), plot.title = element_text(colour = "black", face = "bold", size = 10))
+ggsave("112年1121[花蓮火車站─光復]返程假日]上車站點-乘坐時間長條圖.jpeg", height = 8.25,width = 13.79)
+```
+
+
+
