@@ -1,0 +1,289 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+
+# csv打開中文正常，但R讀的異常
+從csv看起來正常：資料-從csv-選utf-8 - 轉換檔案
+從R看起來正常：匯出-變更檔案類型-令存心黨-檔案類型(csv.utf-8)
+
+# word修改圖標題序號格式
+參考資料-插入標號，若要更新成對的順序，ctrl+A+f9
+
+
+
+### 定義一個函數來判斷一個月有多少天是假日和平日
+
+```{r}
+count_weekdays_and_weekends <- function(year, month) { 
+  # 獲取指定年份和月份的天數
+  days_in_month <- days_in_month(as.Date(paste(year, month, "01", sep = "-")))
+  # 初始化計數器
+  weekdays_count <- 0
+  weekends_count <- 0
+  for (day in 1:days_in_month) { # 逐天計算星期幾，並根據星期幾來計數假日和平日
+    date <- as.Date(paste(year, month, day, sep = "-"))
+    weekday <- wday(date)  # wday() 函數返回星期幾，1 表示星期日，2 表示星期一，以此類推
+    if (weekday == 1 || weekday == 7) {
+      weekends_count <- weekends_count + 1
+    } else {
+      weekdays_count <- weekdays_count + 1
+    }
+  }
+  return(list(weekdays = weekdays_count, weekends = weekends_count))
+}
+
+data111_weekday <- c()
+data111_weekend <- c()
+for (i in 7:12) {
+  for (k in c(0,1)) {
+    if (k == 1) {
+      data111_weekday <- rbind(data111_weekday, c(111, i, length(which(data111$月份==i&data111$平日1週末0==k)), k))
+    } else {
+      data111_weekend <- rbind(data111_weekend, c(111, i, length(which(data111$月份==i&data111$平日1週末0==k)), k))
+    }
+  }
+}
+data112_weekday <- c()
+data112_weekend <- c()
+for (i in 7:12) {
+  for (k in c(0,1)) {
+    if (k == 1) {
+      data112_weekday <- rbind(data112_weekday, c(112, i, length(which(data112$月份==i&data112$平日1週末0==k)), k))
+    } else {
+      data112_weekend <- rbind(data112_weekend, c(112, i, length(which(data112$月份==i&data112$平日1週末0==k)), k))
+    }
+  }
+}
+data_week <- rbind(data111_weekday, data111_weekend, data112_weekday, data112_weekend)
+data_week <- as.data.frame(data_week)
+colnames(data_week) <- c("年份", "月份", "人數", "平假日")
+data_week$平假日[data_week$平假日 == 1] <- "平日"
+data_week$平假日[data_week$平假日 == 0] <- "假日"
+data_week <- cbind(data_week, paste(data_week$年份, data_week$平假日, sep = ""))
+colnames(data_week)[5] <- "年份平假日"
+data_week_avarage <- c()
+for (i in 1:length(data_week$月份)) {
+  if (data_week$平假日[i]=="平日") {
+    data_week_avarage <- c(data_week_avarage, data_week$人數[i]/
+                            as.numeric(count_weekdays_and_weekends(data_week$年份[i]+1911, data_week$月份[i]))[1])
+  } else {
+    data_week_avarage <- c(data_week_avarage, data_week$人數[i]/
+                            as.numeric(count_weekdays_and_weekends(data_week$年份[i]+1911, data_week$月份[i]))[2])
+  }
+}
+data_week_avarage <- as.data.frame(data_week_avarage)
+colnames(data_week_avarage) <- "平均人數"
+data_week <- cbind(data_week, data_week_avarage)
+
+```
+
+
+```{r}
+data <- data1[which(data1$路線=="8163"),]
+data111 <- data[data$年份=="2022",]
+data112 <- data[data$年份=="2023",]
+data113 <- data[data$年份=="2024",]
+
+count_weekdays_and_weekends <- function(year, month) { # 定義一個函數來判斷一個月有多少天是假日和平日
+  # 獲取指定年份和月份的天數
+  days_in_month <- days_in_month(as.Date(paste(year, month, "01", sep = "-")))
+  # 初始化計數器
+  weekdays_count <- 0
+  weekends_count <- 0
+  for (day in 1:days_in_month) { # 逐天計算星期幾，並根據星期幾來計數假日和平日
+    date <- as.Date(paste(year, month, day, sep = "-"))
+    weekday <- wday(date)  # wday() 函數返回星期幾，1 表示星期日，2 表示星期一，以此類推
+    if (weekday == 1 || weekday == 7) {
+      weekends_count <- weekends_count + 1
+    } else {
+      weekdays_count <- weekdays_count + 1
+    }
+  }
+  return(list(weekdays = weekdays_count, weekends = weekends_count))
+}
+
+data111_weekday <- c()
+data111_weekend <- c()
+for (i in 7:12) {
+  for (k in c(0,1)) {
+    if (k == 1) {
+      data111_weekday <- rbind(data111_weekday, c(111, i, length(which(data111$月份==i&data111$平日1週末0==k)), k))
+    } else {
+      data111_weekend <- rbind(data111_weekend, c(111, i, length(which(data111$月份==i&data111$平日1週末0==k)), k))
+    }
+  }
+}
+data112_weekday <- c()
+data112_weekend <- c()
+for (i in 7:12) {
+  for (k in c(0,1)) {
+    if (k == 1) {
+      data112_weekday <- rbind(data112_weekday, c(112, i, length(which(data112$月份==i&data112$平日1週末0==k)), k))
+    } else {
+      data112_weekend <- rbind(data112_weekend, c(112, i, length(which(data112$月份==i&data112$平日1週末0==k)), k))
+    }
+  }
+}
+data_week <- rbind(data111_weekday, data111_weekend, data112_weekday, data112_weekend)
+data_week <- as.data.frame(data_week)
+colnames(data_week) <- c("年份", "月份", "人數", "平假日")
+data_week$平假日[data_week$平假日 == 1] <- "平日"
+data_week$平假日[data_week$平假日 == 0] <- "假日"
+data_week <- cbind(data_week, paste(data_week$年份, data_week$平假日, sep = ""))
+colnames(data_week)[5] <- "年份平假日"
+data_week_avarage <- c()
+for (i in 1:length(data_week$月份)) {
+  if (data_week$平假日[i]=="平日") {
+    data_week_avarage <- c(data_week_avarage, data_week$人數[i]/ as.numeric(count_weekdays_and_weekends(data_week$年份[i]+1911, data_week$月份[i]))[1])
+  } else {
+    data_week_avarage <- c(data_week_avarage, data_week$人數[i]/ as.numeric(count_weekdays_and_weekends(data_week$年份[i]+1911, data_week$月份[i]))[2])
+  }
+}
+data_week_avarage <- as.data.frame(data_week_avarage)
+colnames(data_week_avarage) <- "平均人數"
+data_week <- cbind(data_week, data_week_avarage)
+data_week$平均人數 = round(data_week$平均人數, digits = 2)
+
+data111_sum <- c()
+for (i in 7:12) {
+  data111_sum <- rbind(data111_sum, c(111, i, length(which(data111$月份==i))))
+}
+data111_sum <- as.data.frame(data111_sum)
+colnames(data111_sum) <- c("年份","月份", "人數")
+
+data112_sum <- c()
+for (i in 7:12) {
+  data112_sum <- rbind(data112_sum, c(112, i, length(which(data112$月份==i))))
+}
+data112_sum <- as.data.frame(data112_sum)
+colnames(data112_sum) <- c("年份","月份", "人數")
+data_sum <- rbind(data111_sum, data112_sum)
+
+data_avarage <- c()
+for (i in 1:length(data_sum$月份)) {
+  data_avarage[i] <- data_sum$人數[i]/as.numeric(days_in_month(data_sum$月份[i])) 
+}
+data_avarage <- as.data.frame(data_avarage)
+colnames(data_avarage) <- "日均人數"
+data_sum <- cbind(data_sum, data_avarage)
+data_sum$年份 <- as.character(data_sum$年份)
+
+data_grow <- c()
+for (i in 7:12) {
+  a <- data_sum$人數[which(data_sum$年份=="111"&data_sum$月份==i)]
+  b <- data_sum$人數[which(data_sum$年份=="112"&data_sum$月份==i)]
+  data_grow <- rbind(data_grow, c(112, i, b-a, (b-a)/a))
+}
+data_grow <- as.data.frame(data_grow)
+colnames(data_grow) <- c("年份","月份","成長人數","成長百分比")
+data_grow$年份 <- as.character(data_grow$年份)
+data_grow$成長百分比 = round(data_grow$成長百分比, digits = 2)
+
+TPASS112 <- data112[which(data112$卡種=="TPASS"),]
+TPASS112_sum <- matrix(0,3,3)
+TPASS112_sum[,1] <- c(112,112,112)
+TPASS112_sum[,2] <- c(7,8,9)
+for (i in 10:12) {
+  TPASS112_sum <- rbind(TPASS112_sum, c(112, i, length(which(TPASS112$月份==i))))
+}
+TPASS112_sum <- as.data.frame(TPASS112_sum)
+colnames(TPASS112_sum) <- c("年份","月份", "人數")
+TPASS112_sum$年份 <- as.character(TPASS112_sum$年份)
+
+data_week_grow <- c()
+a = c()  
+b = c()
+for (i in 1:12) {
+  a[i] <- data_week$平均人數[i+12]-data_week$平均人數[i]
+  b[i] <- data_week$平假日[i]
+}
+  data_week_grow <- cbind(112,rep((7:12),2))
+  data_week_grow <- cbind(data_week_grow,b)
+  data_week_grow <- cbind(data_week_grow,a)
+data_week_grow <- as.data.frame(data_week_grow)
+colnames(data_week_grow) <- c("年份","月份","平假日","成長人數")
+data_week_grow$年份 <- as.character(data_week_grow$年份)
+data_week_grow$月份 <- as.numeric(data_week_grow$月份)
+data_week_grow$成長人數 <- as.numeric(data_week_grow$成長人數)
+```
+
+### 一次畫出每月總搭乘次數、日均次數、日均消長、TPASS次數、平假日次數、平假日消長
+```{r}
+data_sum %>%
+  ggplot(aes(x=月份, y=人數, group=年份, color=年份)) +
+  geom_line(size=5) +
+  geom_point(size=10) +
+  scale_x_continuous(breaks = seq(7, 12, by = 1)) +
+  scale_colour_grey() +
+  theme_bw() +
+  theme(text = element_text(size = 50))+
+  labs(x="月份", y="次數", title="111、112年路線8163搭乘次數折線圖")
+  ggsave("C:/Users/A413/Desktop/運籌/111、112年路線8163搭乘次數折線圖.jpeg", width = 30,height = 10)
+
+data_sum %>%
+  ggplot(aes(x=月份, y=日均人數, group=年份, color=年份)) +
+  geom_line(size=5) +
+  geom_point(size=10) +
+  scale_x_continuous(breaks = seq(7, 12, by = 1)) +
+  scale_colour_grey() +
+  theme_bw() +
+  theme(text = element_text(size = 50))+
+  labs(x="月份", y="日均次數", title="111、112年路線8163_日均搭乘次數")
+  ggsave("C:/Users/A413/Desktop/運籌/111、112年路線8163_日均搭乘次數.jpeg", width = 30,height = 10)
+
+data_grow %>%
+  ggplot(aes(x=月份, y=成長人數, group=年份, color=年份)) +
+  geom_line(size=5) +
+  geom_point(size=10) +
+  scale_x_continuous(breaks = seq(7, 12, by = 1)) +
+  scale_colour_grey() +
+  theme_bw() +
+  theme(text = element_text(size = 50))+
+  labs(x="月份", y="成長次數", title="111、112年路線8163__運量消長情形同期比較")
+  ggsave("C:/Users/A413/Desktop/運籌/111、112年路線8163__運量消長情形同期比較.jpeg", width = 30,height = 10)
+
+TPASS112_sum %>%
+  ggplot(aes(x=月份, y=人數, group=年份, color=年份)) +
+  geom_line(size=5) +
+  geom_point(size=10) +
+  scale_x_continuous(breaks = seq(7, 12, by = 1)) +
+  scale_colour_grey() +
+  theme_bw() +
+  theme(text = element_text(size = 50))+
+  labs(x="月份", y="次數", title="112年路線8163_TPASS搭乘次數")
+  ggsave("C:/Users/A413/Desktop/運籌/112年路線8163_TPASS搭乘次數.jpeg", width = 30,height = 10)
+
+data_week %>%
+  ggplot(aes(x=月份, y=平均人數, group=年份平假日, color=年份平假日)) +
+  geom_line(size=5) +
+  geom_point(size=10) +
+  scale_x_continuous(breaks = seq(7, 12, by = 1)) +
+  scale_colour_grey() +
+  theme_bw() +
+  theme(text = element_text(size = 50))+
+  labs(x="月份", y="平均次數", title="111、112年路線8163_平假日每日平均次數")
+  
+ggsave("C:/Users/A413/Desktop/運籌/111、112年路線8163_平假日每日平均次次數.jpeg", width = 30,height = 10)
+
+
+
+data_week_grow %>%
+  ggplot(aes(x=月份, y=成長人數, group=平假日, color=平假日)) +
+  geom_line(size=5) +
+  geom_point(size=10) +
+  scale_x_continuous(breaks = seq(7, 12, by = 1)) +
+  scale_colour_grey() +
+  theme_bw() +
+  theme(text = element_text(size = 50)) +
+  labs(x="月份", y="平均次數", title="111、112年路線8163_平假日日均次數消長情形")
+  ggsave("C:/Users/A413/Desktop/運籌/111、112年路線8163_平假日日均次數消長情形.jpeg", width = 30,height = 10)
+
+
+# 可以匯出csv表格，就不用手動輸入數值
+write.csv(t(A),"C:/Users/raygo/Desktop/興東客運/8103、8120/A.csv")
+```
+
