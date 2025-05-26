@@ -3,7 +3,7 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 library(purrr)
-library(showtext)
+library(grDevices)
 
 #設定檔案路徑，假設所有 Excel 檔案都在這個資料夾
 folder_path <- "C:/Users/user/Desktop/運籌/普悠瑪客運"
@@ -58,40 +58,62 @@ year_count <- combined_df %>% count(上車年, name = "數量") %>% filter(!is.n
 #查看結果
 print(year_count)
 
+#儲存圖片
+#png("110-112年乘車人次折線圖.png",
+#    width = 980,
+#    height = 540,
+#    unit = "px",
+#    family = "kai")
+
 #繪圖
 ## 字型設定: 標楷體
+library(grDevices)
 windowsFonts(kai = windowsFont("DFKai-SB"))
-par(family = "kai", mar = c(4, 4, 4, 4))
+par(family = "kai", mar = c(5, 10, 8, 6))
 plot(x = year_count$上車年,
      y = year_count$數量,
      type = "o",
+     main = "110-112年乘車人次折線圖",
+     xlab = "",
+     ylab = "",
      lwd = 2,
      pch = 16,
-     xlab = "年份",
-     ylab = "乘車人次",
-     main = "110-112年乘車人次折線圖",
      cex.main = 2,
      cex.lab = 2,
      cex.axis = 1.5,
      cex = 1.5,
+     ylim = c(0, max(na.omit(year_count$數量)) * 1.1),
      xaxt = "n",
      yaxt = "n",
      bty = "n")
 
 # x 軸
-axis(side = 1, at = seq(min(year_count$上車年), max(year_count$上車年)), labels = year_count$上車年, cex.axis = 1.5)
+axis(side = 1, 
+     at = seq(min(year_count$上車年), max(year_count$上車年)), 
+     labels = year_count$上車年, 
+     cex.axis = 1.5)
 
 # y 軸
-axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+axis(side = 2, 
+     las = 1, 
+     cex.axis = 1.5, 
+     line = 0)
+
+mtext("年份", side = 1, line = 3, cex = 1.5)
+mtext("乘車人次", side = 2, line = 7, cex = 1.5)
 
 ##加上網格線
 grid()
 
-##點上方顯示數字
 text(x = year_count$上車年,
      y = year_count$數量,
      labels = year_count$數量,
-     pos = 2)
+     pos = 3, 
+     offset = 1.2, 
+     cex = 1.2)
+
+#dev.off()
+
 
 
 
