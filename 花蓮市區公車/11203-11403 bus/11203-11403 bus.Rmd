@@ -179,69 +179,64 @@ str(df[[1]])
 names(df[[1]][[1]])
 ```
 
-| 欄位名稱                | 中文名稱       | 說明                                           
-| ------------------------| -------------- | --------------------------------------------   
-| `ID`                    | 票證識別碼     | 資料筆唯一識別碼，用於區隔每一筆旅次或票證紀錄。                     
-| `IDType`                | 識別碼類型     | 識別碼類型，如車牌編號、票證序號等，指明 ID 的來源或格式。              
-| `HolderType`            | 票證持有者類   | 票證持有者類型，例如一般民眾、學生、敬老卡等。                     
-| `TicketType`            | 票種           | 如單程票、電子票證、日票等，用以區分不同票價方案。                    
-| `SubTicketType`         | 子票種         | 子票種／細分類，如半價、愛心票、團體票等，為 TicketType 的細部補充。     
-| `PlateNumber`           | 車輛牌號       | 車輛牌照號碼，標示該筆旅次所搭乘的車輛。                         
-| `RouteUID`              | 路線識別碼     | 路線全域唯一識別碼，用於串接不同 API 時對應相同路線。          
-| `RouteName`             | 路線名稱       |  路線名稱，例如「302 花蓮－太魯閣」。                         
-| `SubRouteUID`           | 附屬路線識別碼 | 編碼原則：前四碼主路線，第五碼正副路線，第六碼去返程。                 
-| `SubRouteName`          | 附屬路線名稱   | 附屬路線名稱，對應 SubRouteUID 的文字描述。                 
-| `Direction`             | 去／返程方向   | 通常 0 或 1 表示去程，2 或 3 表示返程。                    
-| `FarePricingType`       | 計費方式       | 如「區間計費」、「里程計費」、「階梯票價」等。                      
-| `StopOrStation`         | 站點類型       | 表示站牌 (Stop) 或站位 (Station)，用於票證 OD 分析對應的資料層級。 
-| `BoardingStopUID`       | 上車站點識別碼 | 上車站點識別碼，對應 StopOrStation。                    
+| 欄位名稱                | 中文名稱       | 說明                                           |
+| ------------------------| -------------- | --------------------------------------------   |
+| `ID`                    | 票證識別碼     | 資料筆唯一識別碼，用於區隔每一筆旅次或票證紀錄。                  |   
+| `IDType`                | 識別碼類型     | 識別碼類型，如車牌編號、票證序號等，指明 ID 的來源或格式。         |     
+| `HolderType`            | 票證持有者類   | 票證持有者類型，例如一般民眾、學生、敬老卡等。                    | 
+| `TicketType`            | 票種           | 如單程票、電子票證、日票等，用以區分不同票價方案。                |    
+| `SubTicketType`         | 子票種         | 子票種／細分類，如半價、愛心票、團體票等，為 TicketType 的細部補充|。     
+| `PlateNumber`           | 車輛牌號       | 車輛牌照號碼，標示該筆旅次所搭乘的車輛。                       |  
+| `RouteUID`              | 路線識別碼     | 路線全域唯一識別碼，用於串接不同 API 時對應相同路線。         | 
+| `RouteName`             | 路線名稱       |  路線名稱，例如「302 花蓮－太魯閣」。                        | 
+| `SubRouteUID`           | 附屬路線識別碼 | 編碼原則：前四碼主路線，第五碼正副路線，第六碼去返程。             |    
+| `SubRouteName`          | 附屬路線名稱   | 附屬路線名稱，對應 SubRouteUID 的文字描述。               |  
+| `Direction`             | 去／返程方向   | 通常 0 或 1 表示去程，2 或 3 表示返程。                  |  
+| `FarePricingType`       | 計費方式       | 如「區間計費」、「里程計費」、「階梯票價」等。                    |  
+| `StopOrStation`         | 站點類型       | 表示站牌 (Stop) 或站位 (Station)，用於票證 OD 分析對應的資料層級。| 
+| `BoardingStopUID`       | 上車站點識別碼 | 上車站點識別碼，對應 StopOrStation。                   | 
 | `BoardingStopName`      | 上車站名       | 上車站名稱。                                      
-| `BoardingStopSequence`  | 上車站序       | 上車站在整條路線中的站序（第幾站）。                           
-| `BoardingTime`          | 上車時間       | 上車時間（ISO 8601 格式）。                           
-| `DeboardingStopUID`     | 下車站點識別碼 | 下車站點識別碼。                                     
+| `BoardingStopSequence`  | 上車站序       | 上車站在整條路線中的站序（第幾站）。                         |  
+| `BoardingTime`          | 上車時間       | 上車時間（ISO 8601 格式）。                         |  
+| `DeboardingStopUID`     | 下車站點識別碼 | 下車站點識別碼。                                    | 
 | `DeboardingStopName`    | 下車站名       | 下車站名稱。                                       
-| `DeboardingStopSequence`| 下車站序       | 下車站在整條路線中的站序。                               
-| `DeboardingTime`        | 下車時間       | 下車時間（ISO 8601 格式）。                          
-| `Price`                 | 原始票價       | 計算後之票價（未含折扣）。                                
-| `Discount`              | 折扣           | 折扣比例或金額，例如「半價」、「８折」。                         
-| `TransferCode`          | 轉乘代碼       | 轉乘優惠代碼，用於標示可否轉乘及轉乘時限等規則。                    
-| `DiscountInfo`          | 折扣說明       | 折扣補充說明文字，補充 Discount 欄位的詳細條件。             
-| `PaymentPrice`          | 實付金額       | 實際支付金額（Price 扣除 Discount 後）。               
+| `DeboardingStopSequence`| 下車站序       | 下車站在整條路線中的站序。                              | 
+| `DeboardingTime`        | 下車時間       | 下車時間（ISO 8601 格式）。                         | 
+| `Price`                 | 原始票價       | 計算後之票價（未含折扣）。                              |  
+| `Discount`              | 折扣           | 折扣比例或金額，例如「半價」、「８折」。                       |  
+| `TransferCode`          | 轉乘代碼       | 轉乘優惠代碼，用於標示可否轉乘及轉乘時限等規則。                   | 
+| `DiscountInfo`          | 折扣說明       | 折扣補充說明文字，補充 Discount 欄位的詳細條件。            | 
+| `PaymentPrice`          | 實付金額       | 實際支付金額（Price 扣除 Discount 後）。             |  
 
 | 欄位名稱                | 資料來源                   | 變數
 | ------------------------| -------------------------- | ----------------------------------------- |
-| `ID`                    | ticp.motc.gov.tw           | #########################################################################
-| `IDType`                | ticp.motc.gov.tw           | EasyCard、PaymentID、iPASS、icash
-| `HolderType`            | ticp.motc.gov.tw           | A、B、C01、C02、C09 (???
-| `TicketType`            | 110traffic.hl.gov.tw       | 1、4 (???
-| `SubTicketType`         | ticp.motc.gov.tw           | HUA-199、HUA-399(花蓮通勤月票)
+| `ID`                    | ticp.motc.gov.tw           | #########################################################################|
+| `IDType`                | ticp.motc.gov.tw           | EasyCard、PaymentID、iPASS、icash|
+| `HolderType`            | ticp.motc.gov.tw           | A、B、C01、C02、C09 (???|
+| `TicketType`            | 110traffic.hl.gov.tw       | 1、4 (???|
+| `SubTicketType`         | ticp.motc.gov.tw           | HUA-199、HUA-399(花蓮通勤月票)|
 | `PlateNumber`           | ticp.motc.gov.tw           | 009-FV、010-FV、011-FV、075-FV、076-FV、
-                                                         EAA-283、EAA-286、EAA-287、EAA-287、EAA-289
-| `RouteUID`              | 交通部公共運輸資料開放平台 | HUA0301、HUA0302、HUA0303、HUA0305
-| `RouteName`             | 110traffic.hl.gov.tw       | 301、302、303、305
-| `SubRouteUID`           | motc-ptx.gitbook.io        | HUA030101、HUA030102、HUA030201、HUA030202、HUA030301、HUA030302、
-                                                         HUA0303B1、HUA0303B2、HUA0303C1、HUA0303C2
-| `SubRouteName`          | Gist                       | 301、302、303、303B、303C、303D、305、305A
-| `Direction`             | motc-ptx.gitbook.io        | 0、1 (哪個是去，哪個是回?)
-| `FarePricingType`       | ticp.motc.gov.tw           | ODFares (???
-| `StopOrStation`         | Gist                       | 0 (???
-| `BoardingStopUID`       | 110traffic.hl.gov.tw       | HUA290407、HUA290442、HUA290453、HUA290470、HUA290471、HUA290494	、
-                                                         HUA290495、HUA290528、HUA290529、HUA290530
-| `BoardingStopName`      | 110traffic.hl.gov.tw       | 三角市場、上騰高商、中山(市八)市場	、中山三慶豐七街口、中華紙漿、中華路、
-                                                         九曲洞、亞洲水泥廠、仁安社區、信義國小
-| `BoardingStopSequence`  | ticp.motc.gov.tw           | 1、10、11、12、13、14、15、16、17、18 
-| `BoardingTime`          | ticp.motc.gov.tw           | #########################################################################
-| `DeboardingStopUID`     | 110traffic.hl.gov.tw       | -99(逃票)、HUA290407、HUA290442、HUA290452、HUA290470、HUA290471、HUA290494、	
-                                                         HUA290528、HUA290529、HUA290530
-| `DeboardingStopName`    | 110traffic.hl.gov.tw       | -99、三角市場、上騰高商、中山(市八)市場、中山三慶豐七街口、中華紙漿、
-                                                         中華路、九曲洞、亞洲水泥廠、仁安社區 (-99 ???
-| `DeboardingStopSequence`| ticp.motc.gov.tw           | -99、1、10、11、12、13、14、15、16、17 (-99 ???
-| `DeboardingTime`        | ticp.motc.gov.tw           | #########################################################################
-| `Price`                 | 110traffic.hl.gov.tw       | 0、104、106、109、110、12、13、149、15、16
-| `Discount`              | ticp.motc.gov.tw           | 0、12、13、15、16、17、18、19、20、21			
-| `TransferCode`          | ticp.motc.gov.tw           | 0102、0199、0202、0299、0302、0399、0402、0499、0602、0702
-| `DiscountInfo`          | ticp.motc.gov.tw           | ???(第一項變數沒有值)
-| `PaymentPrice`          | 110traffic.hl.gov.tw       | 0、1、10、104、109、11、110、12、13、14
+                                                         EAA-283、EAA-286、EAA-287、EAA-287、EAA-289|
+| `RouteUID`              | 交通部公共運輸資料開放平台 | HUA0301、HUA0302、HUA0303、HUA0305|
+| `RouteName`             | 110traffic.hl.gov.tw       | 301、302、303、305|
+| `SubRouteUID`           | motc-ptx.gitbook.io        | HUA030101、HUA030102、HUA030201、HUA030202、HUA030301、HUA030302、HUA0303B1、HUA0303B2、HUA0303C1、HUA0303C2|
+| `SubRouteName`          | Gist                       | 301、302、303、303B、303C、303D、305、305A|
+| `Direction`             | motc-ptx.gitbook.io        | 0、1 (哪個是去，哪個是回?)|
+| `FarePricingType`       | ticp.motc.gov.tw           | ODFares (???|
+| `StopOrStation`         | Gist                       | 0 (???|
+| `BoardingStopUID`       | 110traffic.hl.gov.tw       | HUA290407、HUA290442、HUA290453、HUA290470、HUA290471、HUA290494	、HUA290495、HUA290528、HUA290529、HUA290530|
+| `BoardingStopName`      | 110traffic.hl.gov.tw       | 三角市場、上騰高商、中山(市八)市場	、中山三慶豐七街口、中華紙漿、中華路、九曲洞、亞洲水泥廠、仁安社區、信義國小|
+| `BoardingStopSequence`  | ticp.motc.gov.tw           | 1、10、11、12、13、14、15、16、17、18 |
+| `BoardingTime`          | ticp.motc.gov.tw           | #########################################################################|
+| `DeboardingStopUID`     | 110traffic.hl.gov.tw       | -99(逃票)、HUA290407、HUA290442、HUA290452、HUA290470、HUA290471、HUA290494、 HUA290528、HUA290529、HUA290530|
+| `DeboardingStopName`    | 110traffic.hl.gov.tw       | -99、三角市場、上騰高商、中山(市八)市場、中山三慶豐七街口、中華紙漿、中華路、九曲洞、亞洲水泥廠、仁安社區 (-99 ???|
+| `DeboardingStopSequence`| ticp.motc.gov.tw           | -99、1、10、11、12、13、14、15、16、17 (-99 ???|
+| `DeboardingTime`        | ticp.motc.gov.tw           | #########################################################################|
+| `Price`                 | 110traffic.hl.gov.tw       | 0、104、106、109、110、12、13、149、15、16|
+| `Discount`              | ticp.motc.gov.tw           | 0、12、13、15、16、17、18、19、20、21			|
+| `TransferCode`          | ticp.motc.gov.tw           | 0102、0199、0202、0299、0302、0399、0402、0499、0602、0702|
+| `DiscountInfo`          | ticp.motc.gov.tw           | ???(第一項變數沒有值)|
+| `PaymentPrice`          | 110traffic.hl.gov.tw       | 0、1、10、104、109、11、110、12、13、14|
 
 
 ```{r}
@@ -629,12 +624,12 @@ for (bus in buses){
 ```{r}
 # 太魯閣客運總運量
 total_volume_plot <- function(buses) {
+  bus = buses[1]
+  colors <- rainbow(length(buses))
   transport_volume = NULL
-  tpass = NULL
   
   for (month_index in months){
     transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
-    tpass = c(tpass, df_summary[[month_index]][[bus]][['SubTicketType']][[2]][1] + df_summary[[month_index]][[bus]][['SubTicketType']][[2]][2])
   }
   
   par(family = "kai", mar = c(5, 4, 4, 7))  # 字體與圖寬
@@ -644,35 +639,36 @@ total_volume_plot <- function(buses) {
        type = "o",
        lwd = 2,
        pch = 16,
-       col = "blue",
+       col = colors[1],
        xlab = "月份",
        ylab = "乘車人次",
        main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線乘車人次折線圖'),
-       ylim = c(min(tpass) * 0.9, max(transport_volume) * 1.1)
+       ylim = c(min(transport_volume) * 0.9, max(transport_volume) * 1.1)
        )
   
-  lines(x = month.from:month.to,
-        y = tpass,
+  for(bus_index in 2:length(buses)){
+      bus = buses[bus_index]
+      transport_volume = NULL
+      for (month_index in months){
+        transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
+      }
+      
+      lines(x = month.from:month.to,
+        y = transport_volume,
         type = "o",
         lwd = 2,
         pch = 16,
-        col = "red"
+        col = colors[bus_index]
         )
-  
-  lines(x = month.from:month.to,
-        y = transport_volume - tpass,
-        type = "o",
-        lwd = 2,
-        pch = 16,
-        col = "darkgreen"
-        )
+  }
+
   
   grid()  # 網格線
   
   # 圖例
   legend("topright", 
-         legend = c("總運量", "TPASS旅客", "其他旅客"), 
-         col = c("blue", "red", "darkgreen"), 
+         legend = buses, 
+         col = colors, 
          lwd = 2, 
          pch = 16,
          bty = "n",
