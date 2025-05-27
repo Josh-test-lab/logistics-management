@@ -7,6 +7,8 @@ date: "114-05-25"
 
 本程式碼適用於分析111-113年花蓮太魯閣客運所提供的 .xml 資料檔案。
 
+
+# 參數設定
 ```{r}
 # library
 library(xml2)
@@ -181,20 +183,56 @@ buses = names(df[[1]])
 # 檢視前幾筆資料
 head(df[[1]][[1]])
 str(df[[1]])
+```
 
+```{r}
 # 整理日期，找出星期幾
+# 新增 Weekday 欄位
+
+# 上車分鐘與下車分鐘
+# 上車分鐘指該天上車時間權全換為分鐘，如 21 小時 31 分 15 秒為 21 × 60 + 31 = 1291 分鐘
+# 新增 BoardingTimeInMinutes 和 DeboardingTimeInMinutes 欄位
+
+# 搭乘時間
+# 是指下車分鐘減去上車分鐘
+
+month.from = 1
+month.to = 12
+months = generate_months(year.from, year.to, month.from, month.to)
+
 for (month_index in months) {
   for (bus_index in buses) {
     df[[month_index]][[bus_index]] <- df[[month_index]][[bus_index]] |>
       mutate(
-        BoardingParsed = suppressWarnings(ymd_hms(BoardingTime)),
-        DeboardingParsed = suppressWarnings(ymd_hms(DeboardingTime)),
-        Weekday = weekdays(coalesce(BoardingParsed, DeboardingParsed))
+        BoardingParsed = if_else(
+          BoardingTime == "0000-00-00 00:00:00",
+          as.POSIXct(NA),
+          suppressWarnings(ymd_hms(BoardingTime))
+        ),
+        DeboardingParsed = if_else(
+          DeboardingTime == "0000-00-00 00:00:00",
+          as.POSIXct(NA),
+          suppressWarnings(ymd_hms(DeboardingTime))
+        ),
+        
+        # 星期幾
+        Weekday = weekdays(coalesce(BoardingParsed, DeboardingParsed)),
+        
+        # 上車分鐘
+        BoardingTimeInMinutes = hour(BoardingParsed) * 60 + minute(BoardingParsed) + second(BoardingParsed) / 60,
+        
+        # 下車分鐘
+        DeboardingTimeInMinutes = hour(DeboardingParsed) * 60 + minute(DeboardingParsed) + second(DeboardingParsed) / 60,
+        
+        # 搭乘時間
+        TravelTime = DeboardingTimeInMinutes - BoardingTimeInMinutes
       ) |>
       select(-BoardingParsed, -DeboardingParsed)  # 清除中間欄位
   }
 }
 ```
+
+
 
 ```{r}
 # 儲存至 csv 檔案
@@ -261,7 +299,7 @@ names(df[[1]][[1]])
 | `RouteName`             | 110traffic.hl.gov.tw       | 301、302、303、305|
 | `SubRouteUID`           | motc-ptx.gitbook.io        | HUA030101、HUA030102、HUA030201、HUA030202、HUA030301、HUA030302、HUA0303B1、HUA0303B2、HUA0303C1、HUA0303C2|
 | `SubRouteName`          | Gist                       | 301、302、303、303B、303C、303D、305、305A|
-| `Direction`             | motc-ptx.gitbook.io        | 0、1 (哪個是去，哪個是回?)|
+| `Direction`             | motc-ptx.gitbook.io        | 0、1 (0去，1回，來源 https://zh.wikipedia.org/zh-tw/太魯閣客運)|
 | `FarePricingType`       | ticp.motc.gov.tw           | ODFares (???|
 | `StopOrStation`         | Gist                       | 0 (???|
 | `BoardingStopUID`       | 110traffic.hl.gov.tw       | HUA290407、HUA290442、HUA290453、HUA290470、HUA290471、HUA290494	、HUA290495、HUA290528、HUA290529、HUA290530|
@@ -281,6 +319,9 @@ names(df[[1]][[1]])
 
 ```{r}
 # simple summary for every variables
+month.from = 1
+month.to = 12
+months = generate_months(year.from, year.to, month.from, month.to)
 df_summary = data_summary(df)
 
 #df_summary
@@ -418,6 +459,125 @@ df_grow.week[[1]]
 ```
 
 ```{r}
+# 定義站點
+bus_stops = list()
+bus_stops[['301']] = c( "花蓮轉運站",
+                        "花蓮電影城",
+                        "商校街",
+                        "花蓮商校",
+                        "郵政總局",
+                        "明義國小",
+                        "遠東百貨",
+                        "花蓮文創園區",
+                        "中華路",
+                        "東大門夜市",
+                        "重慶市場(石藝大街)",
+                        "信義國小",
+                        "南濱公園",
+                        "武聖宮(榮光社區)",
+                        "燕聲廣播",
+                        "仁安社區",
+                        "阿美麻糬",
+                        "新天堂樂園",
+                        "光華樂活創意園區",
+                        "中華紙漿",
+                        "大學路口",
+                        "東華大學",
+                        "行政大樓",
+                        "原住民學院",
+                        "育成中心",
+                        "圖書館資訊大樓"
+                      )
+
+bus_stops[['302']] = c( "新城火車站",
+                        "立閣文旅",
+                        "亞洲水泥廠",
+                        "可樂",
+                        "富世國小",
+                        "太魯閣",
+                        "太魯閣國家公園",
+                        "砂卡噹",
+                        "溪畔",
+                        "燕子口",
+                        "九曲洞",
+                        "合流露營區",
+                        "綠水",
+                        "天祥"
+                      )
+
+bus_stops[['303']] = c( "花蓮轉運站",
+                        "市立圖書館",
+                        "中山(市八)市場",
+                        "明廉國小",
+                        "花蓮果菜市場",
+                        "中山三慶豐七街口",
+                        "好客藝術村",
+                        "吉安鄉公所(慶修院)",
+                        "上騰高商",
+                        "福興",
+                        "大陸麵店",
+                        "南華國小",
+                        "秧悅酒店",
+                        "干城",
+                        "花蓮監獄",
+                        "慕谷慕魚",
+                        "文蘭",
+                        "鯉魚潭潭北遊客中心",
+                        "鯉魚潭潭南遊憩區",
+                        "白鮑溪橋",
+                        "光榮(壽豐鄉原民館)",
+                        "門諾醫院壽豐分院",
+                        "豐之谷自然生態公園",
+                        "豐坪開發區",
+                        "豐坪活動中心",
+                        "豐華再現館",
+                        "雲山水"
+                      )
+
+bus_stops[['305']] = c( "花蓮轉運站",
+                        "市立圖書館",
+                        "中山(市八)市場",
+                        "花蓮後站",
+                        "明廉國小",
+                        "慈濟醫院",
+                        "慈濟大學",
+                        "莊敬路",
+                        "北昌國小",
+                        "建國北昌五街口",
+                        "建國路加油站",
+                        "三角市場",
+                        "碧雲莊",
+                        "慈濟科技大學",
+                        "水源大橋",
+                        "水源村"
+                      )
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 畫圖
+
+
+```{r}
 # 運量
 volume_plot <- function(bus, year) {
   transport_volume = NULL
@@ -542,9 +702,9 @@ tpass_volume_plot <- function(bus, year) {
   
   for (month_index in months){
     transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
-    tpass = c(tpass, df_summary[[month_index]][[bus]][['SubTicketType']][[2]][1] + df_summary[[month_index]][[bus]][['SubTicketType']][[2]][2])
+    tpass = c(tpass, sum(df_summary[[month_index]][[bus]][['SubTicketType']][[2]]) - as.data.frame(df_summary[[month_index]][[bus]]$SubTicketType)[[2]][is.na(df_summary[[month_index]][[bus]]$SubTicketType$SubTicketType)]
+              )
   }
-  tpass[is.na(tpass)] = 0
 
   par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
   
@@ -672,14 +832,14 @@ tpass_volume_plot <- function(bus, year) {
   
   for (month_index in months){
     transport_volume = c(transport_volume, nrow(df[[month_index]][[bus]]))
-    tpass = c(tpass, df_summary[[month_index]][[bus]][['SubTicketType']][[2]][1] + df_summary[[month_index]][[bus]][['SubTicketType']][[2]][2])
+    tpass = c(tpass, sum(df_summary[[month_index]][[bus]][['SubTicketType']][[2]]) - as.data.frame(df_summary[[month_index]][[bus]]$SubTicketType)[[2]][is.na(df_summary[[month_index]][[bus]]$SubTicketType$SubTicketType)]
+              )
   }
   for (month_index in month.from:month.to){
     week.days = monthly_weekday_and_weekend(year = year, month = month_index)[['Freq']]
     month.days = c(month.days, sum(week.days))
   }
   month.volume.per_day = transport_volume / month.days
-  tpass[is.na(tpass)] = 0
   tpass.volume.per_day = tpass / month.days
   
   par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
@@ -1248,7 +1408,7 @@ dev.off()
 # 太魯閣客運多年總運量(年)
 year_total_volume_plot <- function(buses, year.from, year.to) {
   years = year.from:year.to
-  color <- gray.colors(length(years)+1)
+  color <- gray.colors(2)
   
   transport_volume_year <- sapply(years, function(year) {
     months <- generate_months(year, year, month.from, month.to)
@@ -1293,8 +1453,8 @@ year_total_volume_plot <- function(buses, year.from, year.to) {
   
   # 圖例
   legend("topright", 
-         legend = paste0(years - 1911, '年'), 
-         col = color, 
+         legend = "總運量", 
+         col = color[1], 
          lwd = 2, 
          pch = 16,
          bty = "n",
@@ -1672,7 +1832,7 @@ for(bus in buses){
 ```
 
 ```{r}
-# 月平假日增長量
+# 路線搭車票種長條圖
 tick_type_histgram <- function(bus, year) {
   months = generate_months(year, year, month.from, month.to)
   
@@ -1775,9 +1935,249 @@ for(bus in buses){
 ```
 
 
+```{r}
+# 路線搭車票種長條圖 (去程，driction = 0; 回程，driction = 1)
+tick_type_driection_histgram <- function(bus, year, driection) {
+  months = generate_months(year, year, month.from, month.to)
+  
+  df_ticket = data.frame()
+  for(month_index in months){
+    df_ticket = rbind(df_ticket, df[[month_index]][[bus]][ df[[month_index]][[bus]][["Direction"]] == driection, ])
+  }
+  
+  df_ticket <- table(df_ticket$HolderType)
+  color <- gray.colors(length(df_ticket))
+  
+  par(family = "kai", mar = c(5, 6, 4, 3))  # 字體與圖寬
+  
+  bp <- barplot(height = df_ticket,
+                col = color,
+                xlab = "票種",
+                ylab = "數量",
+                las = 1,
+                cex.main = 2,
+                cex.lab = 2,
+                cex.axis = 1.5,
+                cex = 1.5,
+                yaxt = "n",
+                main = "",
+                ylim = c(0, max(df_ticket) * 1.1)
+                )
+
+  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線', ifelse(driection == 0, '去程', '回程'), '搭車票種'), cex.main = 2, adj = 0)
+  
+  # x 軸
+  #axis(side = 1, at = 1:length(df_ticket), labels = c(names(df_ticket)), cex.axis = 1.5)
+  
+  # y 軸
+  axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  
+  # 百分比
+  labels <- paste0(round(df_ticket * 100 / sum(df_ticket)), "%")
+  
+  text(x = bp, 
+       y = df_ticket, 
+       labels = labels, 
+       pos = 3,
+       cex = 1.5)
+  
+}
+
+
+# 全年
+month.from = 1
+month.to = 12
+for (driection in 0:1){
+  for(bus in buses){
+    for (year in year.from:year.to){
+      # 繪圖 (在 R中呈現)
+      tick_type_driection_histgram(bus, year, driection)
+      
+      # 儲存圖片
+      path = paste0("images/", year - 1911, "/", bus, "/barplot")
+      check_path(path)
+      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      tick_type_driection_histgram(bus, year, driection)
+      dev.off()
+    }
+  }
+}
 
 
 
+# 上半
+month.from = 1
+month.to = 6
+for (driection in 0:1){
+  for(bus in buses){
+    for (year in year.from:year.to){
+      # 繪圖 (在 R中呈現)
+      tick_type_driection_histgram(bus, year, driection)
+      
+      # 儲存圖片
+      path = paste0("images/", year - 1911, "/", bus, "/barplot")
+      check_path(path)
+      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      tick_type_driection_histgram(bus, year, driection)
+      dev.off()
+    }
+  }
+}
+
+
+# 下半
+month.from = 7
+month.to = 12
+for (driection in 0:1){
+  for(bus in buses){
+    for (year in year.from:year.to){
+      # 繪圖 (在 R中呈現)
+      tick_type_driection_histgram(bus, year, driection)
+      
+      # 儲存圖片
+      path = paste0("images/", year - 1911, "/", bus, "/barplot")
+      check_path(path)
+      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      tick_type_driection_histgram(bus, year, driection)
+      dev.off()
+    }
+  }
+}
+```
+
+
+```{r}
+# 上車分鐘票種點圖
+boarding_time_driection_plot <- function(bus, year, driection) {
+  months = generate_months(year, year, month.from, month.to)
+  
+  df_ticket = data.frame()
+  for(month_index in months){
+    df_ticket = rbind(df_ticket, df[[month_index]][[bus]][ df[[month_index]][[bus]][["Direction"]] == driection, ])
+  }
+  
+  # 將 HolderType 和 TravelTime 是 NA 的資料移除
+  df_ticket = df_ticket[!is.na(df_ticket$HolderType), ]
+  df_ticket = df_ticket[!is.na(df_ticket$TravelTime), ]
+  
+  df_ticket$BoardingStopSequence = as.numeric(df_ticket$BoardingStopSequence)
+  
+  holder_types <- unique(df_ticket$HolderType)
+  color <- setNames(rainbow(length(holder_types)), holder_types)
+  df_ticket$Color <- color[df_ticket$HolderType]
+  
+  par(family = "kai", mar = c(14, 6, 4, 10))  # 字體與圖寬
+  
+  plot(x = df_ticket$BoardingStopSequence,
+       y = df_ticket$TravelTime,
+       col = df_ticket$Color,
+       xlab = "",
+       ylab = "上車分鐘",
+       pch = 16,
+       las = 1,
+       cex.main = 2,
+       cex.lab = 2,
+       cex.axis = 1.5,
+       cex = 1.5,
+       xaxt = "n",
+       #yaxt = "n",
+       main = ""
+       )
+
+  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線(', ifelse(driection == 0, '去程', '回程'), ')上車站點-上車分鐘票種點圖'), cex.main = 2, adj = 0)
+  
+  # x 軸
+  labels_to_use <- if (driection == 0) {
+    bus_stops[[bus]]
+  } else {
+    rev(bus_stops[[bus]])
+  }
+  
+  axis(side = 1,
+       las = 2,
+       at = 1:length(bus_stops[[bus]]),
+       labels =  labels_to_use,
+       cex.axis = 1.2
+       )
+  mtext("上車站點", side = 1, line = 12, cex = 2)
+  
+  # y 軸
+  #axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  
+  # 圖例
+  legend("topright", 
+         legend = holder_types, 
+         col = color, 
+         lwd = 2, 
+         pch = 16,
+         bty = "n",
+         inset = c(-0.15, 0),
+         xpd = TRUE,
+         cex = 1.5
+         )
+}
+
+
+# 全年
+month.from = 1
+month.to = 12
+for (driection in 0:1){
+  for(bus in buses){
+    for (year in year.from:year.to){
+      # 繪圖 (在 R中呈現)
+      boarding_time_driection_plot(bus, year, driection)
+      
+      # 儲存圖片
+      path = paste0("images/", year - 1911, "/", bus, "/scatter plot")
+      check_path(path)
+      png(filename = paste0(path, "/路線(", ifelse(driection == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      boarding_time_driection_plot(bus, year, driection)
+      dev.off()
+    }
+  }
+}
+
+
+
+# 上半
+month.from = 1
+month.to = 6
+for (driection in 0:1){
+  for(bus in buses){
+    for (year in year.from:year.to){
+      # 繪圖 (在 R中呈現)
+      boarding_time_driection_plot(bus, year, driection)
+      
+      # 儲存圖片
+      path = paste0("images/", year - 1911, "/", bus, "/scatter plot")
+      check_path(path)
+      png(filename = paste0(path, "/路線(", ifelse(driection == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      boarding_time_driection_plot(bus, year, driection)
+      dev.off()
+    }
+  }
+}
+
+
+# 下半
+month.from = 7
+month.to = 12
+for (driection in 0:1){
+  for(bus in buses){
+    for (year in year.from:year.to){
+      # 繪圖 (在 R中呈現)
+      boarding_time_driection_plot(bus, year, driection)
+      
+      # 儲存圖片
+      path = paste0("images/", year - 1911, "/", bus, "/scatter plot")
+      check_path(path)
+      png(filename = paste0(path, "/路線(", ifelse(driection == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      boarding_time_driection_plot(bus, year, driection)
+      dev.off()
+    }
+  }
+}
+```
 
 
 
