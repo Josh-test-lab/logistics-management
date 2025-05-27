@@ -1671,7 +1671,108 @@ for(bus in buses){
 }
 ```
 
+```{r}
+# 月平假日增長量
+tick_type_histgram <- function(bus, year) {
+  months = generate_months(year, year, month.from, month.to)
+  
+  df_ticket = data.frame()
+  for(month_index in months){
+    df_ticket = rbind(df_ticket, df[[month_index]][[bus]])
+  }
+  
+  df_ticket <- table(df_ticket$HolderType)
+  color <- gray.colors(length(df_ticket))
+  
+  par(family = "kai", mar = c(5, 6, 4, 3))  # 字體與圖寬
+  
+  bp <- barplot(height = df_ticket,
+                col = color,
+                xlab = "票種",
+                ylab = "數量",
+                las = 1,
+                cex.main = 2,
+                cex.lab = 2,
+                cex.axis = 1.5,
+                cex = 1.5,
+                yaxt = "n",
+                main = "",
+                ylim = c(0, max(df_ticket) * 1.1)
+                )
 
+  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線搭車票種'), cex.main = 2, adj = 0)
+  
+  # x 軸
+  #axis(side = 1, at = 1:length(df_ticket), labels = c(names(df_ticket)), cex.axis = 1.5)
+  
+  # y 軸
+  axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  
+  # 百分比
+  labels <- paste0(round(df_ticket * 100 / sum(df_ticket)), "%")
+  
+  text(x = bp, 
+       y = df_ticket, 
+       labels = labels, 
+       pos = 3,
+       cex = 1.5)
+  
+}
+
+
+# 全年
+month.from = 1
+month.to = 12
+for(bus in buses){
+  for (year in year.from:year.to){
+    # 繪圖 (在 R中呈現)
+    tick_type_histgram(bus, year)
+    
+    # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/barplot")
+    check_path(path)
+    png(filename = paste0(path, "/路線搭車票種_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+    tick_type_histgram(bus, year)
+    dev.off()
+  }
+}
+
+
+# 上半
+month.from = 1
+month.to = 6
+for(bus in buses){
+  for (year in year.from:year.to){
+    # 繪圖 (在 R中呈現)
+    tick_type_histgram(bus, year)
+    
+    # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/barplot")
+    check_path(path)
+    png(filename = paste0(path, "/路線搭車票種_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+    tick_type_histgram(bus, year)
+    dev.off()
+  }
+}
+
+
+# 下半
+month.from = 7
+month.to = 12
+for(bus in buses){
+  for (year in year.from:year.to){
+    # 繪圖 (在 R中呈現)
+    tick_type_histgram(bus, year)
+    
+    # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/barplot")
+    check_path(path)
+    png(filename = paste0(path, "/路線搭車票種_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+    tick_type_histgram(bus, year)
+    dev.off()
+  }
+}
+```
 
 
 
