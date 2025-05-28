@@ -632,7 +632,7 @@ volume_plot <- function(bus, year) {
        y = transport_volume + max(transport_volume) * 0.02,
        labels = transport_volume,
        pos = 3,            # 文字顯示在點上方
-       cex = 0.8,          # 文字大小
+       cex = 1.5,          # 文字大小
        col = "black"
   )
   
@@ -1657,7 +1657,7 @@ monthly_gorw_up_plot <- function(bus, year) {
        y = df_grow_year + max(df_grow_year) * 0.01,
        labels = df_grow_year,
        pos = 3,            # 文字顯示在點上方
-       cex = 0.8,          # 文字大小
+       cex = 1.5,          # 文字大小
        col = "black"
   )
   
@@ -1950,13 +1950,13 @@ for(bus in buses){
 
 
 ```{r}
-# 路線搭車票種長條圖 (去程，driction = 0; 回程，driction = 1)
-tick_type_driection_histgram <- function(bus, year, driection) {
+# 路線搭車票種長條圖 (去程，direction = 0; 回程，direction = 1)
+tick_type_direction_histgram <- function(bus, year, direction) {
   months = generate_months(year, year, month.from, month.to)
   
   df_ticket = data.frame()
   for(month_index in months){
-    df_ticket = rbind(df_ticket, df[[month_index]][[bus]][ df[[month_index]][[bus]][["Direction"]] == driection, ])
+    df_ticket = rbind(df_ticket, df[[month_index]][[bus]][ df[[month_index]][[bus]][["Direction"]] == direction, ])
   }
   
   df_ticket <- convert_holder_type(df_ticket$HolderType) %>% table()
@@ -1978,7 +1978,7 @@ tick_type_driection_histgram <- function(bus, year, driection) {
                 ylim = c(0, max(df_ticket) * 1.1)
                 )
 
-  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線', ifelse(driection == 0, '去程', '回程'), '搭車票種'), cex.main = 2, adj = 0)
+  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線', ifelse(direction == 0, '去程', '回程'), '搭車票種'), cex.main = 2, adj = 0)
   
   # x 軸
   #axis(side = 1, at = 1:length(df_ticket), labels = c(names(df_ticket)), cex.axis = 1.5)
@@ -2001,17 +2001,17 @@ tick_type_driection_histgram <- function(bus, year, driection) {
 # 全年
 month.from = 1
 month.to = 12
-for (driection in 0:1){
+for (direction in 0:1){
   for(bus in buses){
     for (year in year.from:year.to){
       # 繪圖 (在 R中呈現)
-      tick_type_driection_histgram(bus, year, driection)
+      tick_type_direction_histgram(bus, year, direction)
       
       # 儲存圖片
       path = paste0("images/", year - 1911, "/", bus, "/barplot")
       check_path(path)
-      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      tick_type_driection_histgram(bus, year, driection)
+      png(filename = paste0(path, "/路線", ifelse(direction == 0, '去程', '回程'), "搭車票種_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      tick_type_direction_histgram(bus, year, direction)
       dev.off()
     }
   }
@@ -2022,17 +2022,17 @@ for (driection in 0:1){
 # 上半
 month.from = 1
 month.to = 6
-for (driection in 0:1){
+for (direction in 0:1){
   for(bus in buses){
     for (year in year.from:year.to){
       # 繪圖 (在 R中呈現)
-      tick_type_driection_histgram(bus, year, driection)
+      tick_type_direction_histgram(bus, year, direction)
       
       # 儲存圖片
       path = paste0("images/", year - 1911, "/", bus, "/barplot")
       check_path(path)
-      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      tick_type_driection_histgram(bus, year, driection)
+      png(filename = paste0(path, "/路線", ifelse(direction == 0, '去程', '回程'), "搭車票種_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      tick_type_direction_histgram(bus, year, direction)
       dev.off()
     }
   }
@@ -2042,17 +2042,17 @@ for (driection in 0:1){
 # 下半
 month.from = 7
 month.to = 12
-for (driection in 0:1){
+for (direction in 0:1){
   for(bus in buses){
     for (year in year.from:year.to){
       # 繪圖 (在 R中呈現)
-      tick_type_driection_histgram(bus, year, driection)
+      tick_type_direction_histgram(bus, year, direction)
       
       # 儲存圖片
       path = paste0("images/", year - 1911, "/", bus, "/barplot")
       check_path(path)
-      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      tick_type_driection_histgram(bus, year, driection)
+      png(filename = paste0(path, "/路線", ifelse(direction == 0, '去程', '回程'), "搭車票種_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      tick_type_direction_histgram(bus, year, direction)
       dev.off()
     }
   }
@@ -2060,46 +2060,62 @@ for (driection in 0:1){
 ```
 
 ```{r}
-# 平假日路線各上車站點票種直方疊圖 (去程，driction = 0; 回程，driction = 1)
-tick_type_week_day_driection_histgram <- function(bus, year, week_day, driection) {
+# 平假日路線各上車站點票種直方疊圖 (去程，direction = 0; 回程，direction = 1)
+tick_type_week_day_direction_histgram <- function(bus, year, week_day, direction) {
   months = generate_months(year, year, month.from, month.to)
   if (week_day == '平日'){
     weekday = c("星期一", "星期二", "星期三", "星期四", "星期五")
   } else {
     weekday = c("星期六", "星期日")
   }
-  df_ticket = data.frame()
-  for(month_index in months){
-    df_ticket = rbind(df_ticket, df[[month_index]][[bus]][ df[[month_index]][[bus]][["Direction"]] == driection, ])
+  df_ticket <- data.frame()
+  for (month_index in months) {
+    df_month <- df[[month_index]][[bus]]
+    df_month <- df_month[df_month$Direction == direction, ]
+    df_ticket <- rbind(df_ticket, df_month)
   }
 
-  df_ticket <- df_ticket[df_ticket$Weekday %in% weekday, ]
-  ticket_count <- convert_holder_type(df_ticket$HolderType) %>% table()
-  color <- gray.colors(length(ticket_count))
+  df_ticket <- df_ticket[df_ticket$Weekday %in% weekday, ]  # 抓取平假日 
+  df_ticket <- df_ticket[df_ticket$BoardingStopName != "-99", ]  #移除逃票
+  table_limit <- max(table(df_ticket$BoardingStopName))
+  df_ticket$HolderType <- convert_holder_type(df_ticket$HolderType)
+
+  ticket_count <- table(df_ticket$HolderType, df_ticket$BoardingStopName)
+  color <- gray.colors(nrow(ticket_count))
+  #color <- rainbow(nrow(ticket_count))
   
-  par(family = "kai", mar = c(5, 6, 4, 3))  # 字體與圖寬
+  par(family = "kai", mar = c(5, 13, 4, 6))  # 字體與圖寬
   
   barplot(height = ticket_count,
-                col = color,
-                xlab = "票種",
-                ylab = "數量",
-                las = 1,
-                cex.main = 2,
-                cex.lab = 2,
-                cex.axis = 1.5,
-                cex = 1.5,
-                yaxt = "n",
-                main = "",
-                ylim = c(0, max(ticket_count) * 1.1)
-                )
+          col = color,
+          xlab = "票種疊圖",
+          #ylab = "站別",
+          las = 1,
+          horiz = TRUE,
+          cex.main = 2,
+          cex.lab = 2,
+          cex.axis = 1.5,
+          cex = 1.5,
+          #yaxt = "n",
+          main = "",
+          xlim = c(0, table_limit * 1.1)
+          )
 
-  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線', ifelse(driection == 0, '去程', '回程'), ifelse(week_day == '平日', '平日', '假日'), '各上車站點票種直方疊圖'), cex.main = 2, adj = 0)
+  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線', ifelse(direction == 0, '去程', '回程'), ifelse(week_day == '平日', '平日', '假日'), '各上車站點票種直方疊圖'), cex.main = 2, adj = 0)
   
   # x 軸
   #axis(side = 1, at = 1:length(ticket_count), labels = c(names(ticket_count)), cex.axis = 1.5)
   
   # y 軸
-  axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  #axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  
+    # 圖例
+  legend("topright", 
+         legend = rownames(ticket_count), 
+         fill =  color, 
+         title = "票種",
+         cex = 1.5
+         )
 
 }
 
@@ -2107,39 +2123,42 @@ tick_type_week_day_driection_histgram <- function(bus, year, week_day, driection
 # 全年
 month.from = 1
 month.to = 12
-for (driection in 0:1){
-  for(bus in buses){
-    for (year in year.from:year.to){
-      # 繪圖 (在 R中呈現)
-      tick_type_driection_histgram(bus, year, driection)
-      
-      # 儲存圖片
-      path = paste0("images/", year - 1911, "/", bus, "/barplot")
-      check_path(path)
-      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      tick_type_driection_histgram(bus, year, driection)
-      dev.off()
+for (week_day in c('平日', '假日')){
+  for (direction in 0:1){
+    for(bus in buses){
+      for (year in year.from:year.to){
+        # 繪圖 (在 R中呈現)
+        tick_type_week_day_direction_histgram(bus, year, week_day, direction)
+        
+        # 儲存圖片
+        path = paste0("images/", year - 1911, "/", bus, "/barplot")
+        check_path(path)
+        png(filename = paste0(path, "/路線", ifelse(direction == 0, '去程', '回程'), ifelse(week_day == '平日', '平日', '假日'),  "各上車站點票種直方疊圖_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+        tick_type_week_day_direction_histgram(bus, year, week_day, direction)
+        dev.off()
+      }
     }
   }
 }
 
 
-
 # 上半
 month.from = 1
 month.to = 6
-for (driection in 0:1){
-  for(bus in buses){
-    for (year in year.from:year.to){
-      # 繪圖 (在 R中呈現)
-      tick_type_driection_histgram(bus, year, driection)
-      
-      # 儲存圖片
-      path = paste0("images/", year - 1911, "/", bus, "/barplot")
-      check_path(path)
-      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      tick_type_driection_histgram(bus, year, driection)
-      dev.off()
+for (week_day in c('平日', '假日')){
+  for (direction in 0:1){
+    for(bus in buses){
+      for (year in year.from:year.to){
+        # 繪圖 (在 R中呈現)
+        tick_type_week_day_direction_histgram(bus, year, week_day, direction)
+        
+        # 儲存圖片
+        path = paste0("images/", year - 1911, "/", bus, "/barplot")
+        check_path(path)
+        png(filename = paste0(path, "/路線", ifelse(direction == 0, '去程', '回程'), ifelse(week_day == '平日', '平日', '假日'),  "各上車站點票種直方疊圖_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+        tick_type_week_day_direction_histgram(bus, year, week_day, direction)
+        dev.off()
+      }
     }
   }
 }
@@ -2148,18 +2167,20 @@ for (driection in 0:1){
 # 下半
 month.from = 7
 month.to = 12
-for (driection in 0:1){
-  for(bus in buses){
-    for (year in year.from:year.to){
-      # 繪圖 (在 R中呈現)
-      tick_type_driection_histgram(bus, year, driection)
-      
-      # 儲存圖片
-      path = paste0("images/", year - 1911, "/", bus, "/barplot")
-      check_path(path)
-      png(filename = paste0(path, "/路線", ifelse(driection == 0, '去程', '回程'), "搭車票種_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      tick_type_driection_histgram(bus, year, driection)
-      dev.off()
+for (week_day in c('平日', '假日')){
+  for (direction in 0:1){
+    for(bus in buses){
+      for (year in year.from:year.to){
+        # 繪圖 (在 R中呈現)
+        tick_type_week_day_direction_histgram(bus, year, week_day, direction)
+        
+        # 儲存圖片
+        path = paste0("images/", year - 1911, "/", bus, "/barplot")
+        check_path(path)
+        png(filename = paste0(path, "/路線", ifelse(direction == 0, '去程', '回程'), ifelse(week_day == '平日', '平日', '假日'),  "各上車站點票種直方疊圖_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+        tick_type_week_day_direction_histgram(bus, year, week_day, direction)
+        dev.off()
+      }
     }
   }
 }
@@ -2168,12 +2189,12 @@ for (driection in 0:1){
 
 ```{r}
 # 上車分鐘票種點圖
-boarding_time_driection_plot <- function(bus, year, driection) {
+boarding_time_direction_plot <- function(bus, year, direction) {
   months = generate_months(year, year, month.from, month.to)
   
   df_ticket = data.frame()
   for(month_index in months){
-    df_ticket = rbind(df_ticket, df[[month_index]][[bus]][ df[[month_index]][[bus]][["Direction"]] == driection, ])
+    df_ticket = rbind(df_ticket, df[[month_index]][[bus]][ df[[month_index]][[bus]][["Direction"]] == direction, ])
   }
   
   # 將 HolderType 和 TravelTime 是 NA 的資料移除
@@ -2189,7 +2210,7 @@ boarding_time_driection_plot <- function(bus, year, driection) {
   par(family = "kai", mar = c(14, 6, 4, 10))  # 字體與圖寬
   
   plot(x = df_ticket$BoardingStopSequence,
-       y = df_ticket$TravelTime,
+       y = df_ticket$BoardingTimeInMinutes,
        col = df_ticket$Color,
        xlab = "",
        ylab = "上車分鐘",
@@ -2204,10 +2225,10 @@ boarding_time_driection_plot <- function(bus, year, driection) {
        main = ""
        )
 
-  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線(', ifelse(driection == 0, '去程', '回程'), ')上車站點-上車分鐘票種點圖'), cex.main = 2, adj = 0)
+  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線(', ifelse(direction == 0, '去程', '回程'), ')上車站點-上車分鐘票種點圖'), cex.main = 2, adj = 0)
   
   # x 軸
-  labels_to_use <- if (driection == 0) {
+  labels_to_use <- if (direction == 0) {
     bus_stops[[bus]]
   } else {
     rev(bus_stops[[bus]])
@@ -2241,17 +2262,17 @@ boarding_time_driection_plot <- function(bus, year, driection) {
 # 全年
 month.from = 1
 month.to = 12
-for (driection in 0:1){
+for (direction in 0:1){
   for(bus in buses){
     for (year in year.from:year.to){
       # 繪圖 (在 R中呈現)
-      boarding_time_driection_plot(bus, year, driection)
+      boarding_time_direction_plot(bus, year, direction)
       
       # 儲存圖片
       path = paste0("images/", year - 1911, "/", bus, "/scatter plot")
       check_path(path)
-      png(filename = paste0(path, "/路線(", ifelse(driection == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      boarding_time_driection_plot(bus, year, driection)
+      png(filename = paste0(path, "/路線(", ifelse(direction == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_all.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      boarding_time_direction_plot(bus, year, direction)
       dev.off()
     }
   }
@@ -2262,17 +2283,17 @@ for (driection in 0:1){
 # 上半
 month.from = 1
 month.to = 6
-for (driection in 0:1){
+for (direction in 0:1){
   for(bus in buses){
     for (year in year.from:year.to){
       # 繪圖 (在 R中呈現)
-      boarding_time_driection_plot(bus, year, driection)
+      boarding_time_direction_plot(bus, year, direction)
       
       # 儲存圖片
       path = paste0("images/", year - 1911, "/", bus, "/scatter plot")
       check_path(path)
-      png(filename = paste0(path, "/路線(", ifelse(driection == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      boarding_time_driection_plot(bus, year, driection)
+      png(filename = paste0(path, "/路線(", ifelse(direction == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_up.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      boarding_time_direction_plot(bus, year, direction)
       dev.off()
     }
   }
@@ -2282,23 +2303,26 @@ for (driection in 0:1){
 # 下半
 month.from = 7
 month.to = 12
-for (driection in 0:1){
+for (direction in 0:1){
   for(bus in buses){
     for (year in year.from:year.to){
       # 繪圖 (在 R中呈現)
-      boarding_time_driection_plot(bus, year, driection)
+      boarding_time_direction_plot(bus, year, direction)
       
       # 儲存圖片
       path = paste0("images/", year - 1911, "/", bus, "/scatter plot")
       check_path(path)
-      png(filename = paste0(path, "/路線(", ifelse(driection == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
-      boarding_time_driection_plot(bus, year, driection)
+      png(filename = paste0(path, "/路線(", ifelse(direction == 0, '去程', '回程'), ")上車站點-上車分鐘票種點圖_down.png"), width = 13.79, height = 8.25, units = "in", res = 300, family = "kai")
+      boarding_time_direction_plot(bus, year, direction)
       dev.off()
     }
   }
 }
 ```
 
+```{r}
+
+```
 
 
 
