@@ -21,6 +21,8 @@ library(ggplot2)
 
 ```{r}
 # function
+start_time = Sys.time()
+
 # load .xml file function
 xml_loader <- function(path){
   xml_data <- read_xml(path)
@@ -172,8 +174,6 @@ paths <- unlist(mapply(function(ym, roc) {
   file.path(base_path, roc, folder, files)
 }, ym = months, roc = roc_years, SIMPLIFY = FALSE))
 
-start_time = Sys.time()
-
 # 將票證資料轉為資料框，以列表呈現
 counter = 1
 pb <- txtProgressBar(min = 0, max = length(paths), style = 3)
@@ -187,11 +187,6 @@ for (month_index in seq(1, length(paths), by = 3)){
   counter = counter + 1
 }
 close(pb)
-
-
-end_time = Sys.time()
-
-print(paste0('Cost time: ', end_time - start_time, ' seconds'))
 
 buses = names(df[[1]])
 
@@ -1528,7 +1523,7 @@ volume_by_bus_plot <- function(bus, year.from, year.to) {
        bty = "n"
        )
   
-  title(main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', bus, '路線總運量'), cex.main = 2, adj = 0)
+  title(main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', month.from, '月至', month.to, '月', bus, '路線月運量'), cex.main = 2, adj = 0)
   
   # x 軸
   axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
@@ -2622,8 +2617,32 @@ for (year in 2024:year.to){
 
 
 
+```{r}
+end_time = Sys.time()
+
+print(paste0('Cost time: ', end_time - start_time, ' minutes'))
+```
 
 
+```{r}
+# tpass
+months = generate_months(2023, year.to, 1, 12)
+  
+tpass = data.frame()
+for(bus in buses){
+  for(month_index in months){
+    tpass = rbind(tpass, df[[month_index]][[bus]])
+  }
+}
+
+tpass = tpass[!is.na(tpass$SubTicketType), ]
+tpass$BoardingTime = ymd_hms(tpass$BoardingTime)
+
+earliest_row = tpass[which.min(tpass$BoardingTime), ]
+print('first tpass: ')
+print(earliest_row)
+
+```
 
 
 
