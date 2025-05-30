@@ -1408,6 +1408,9 @@ check_path(path)
 png(filename = paste0(path, "/month_total_volume_down.png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
 month_total_volume_plot(buses, year.from, year.to)
 dev.off()
+
+
+
 ```
 
 ```{r}
@@ -1437,7 +1440,8 @@ year_total_volume_plot <- function(buses, year.from, year.to) {
        col = color[1],
        xlab = "年",
        ylab = "搭乘次數",
-       ylim = c(min(sapply(transport_volume_year, min)) * 0.9 , max(sapply(transport_volume_year, max)) * 1.1),
+       ylim = c(min(sapply(transport_volume_year, min)) * 0.9 ,
+                max(sapply(transport_volume_year, max)) * 1.1),
        cex.main = 2,
        cex.lab = 2,
        cex.axis = 1.5,
@@ -1480,6 +1484,8 @@ year_total_volume_plot <- function(buses, year.from, year.to) {
 
 
 # 繪圖 (在 R中呈現)
+month.from = 1
+month.to = 12
 year_total_volume_plot(buses, year.from, year.to)
 
 # 儲存圖片
@@ -1488,7 +1494,6 @@ check_path(path)
 png(filename = paste0(path, "/year_total_volume.png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
 year_total_volume_plot(buses, year.from, year.to)
 dev.off()
-
 ```
 
 ```{r}
