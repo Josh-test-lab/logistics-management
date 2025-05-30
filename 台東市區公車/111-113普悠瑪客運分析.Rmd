@@ -897,28 +897,23 @@ for (year in year.from:year.to){
 
 ## 多年總運量(月): 比較不同年的月總運量
 
+
 ```{r}
 month_total_volume_plot <- function(buses, year.from, year.to) {
   years = year.from:year.to
   color <- gray.colors(length(years)+1)
   
-  transport_volume_year = list()
-  for (year in years) {
-    months = generate_months(year, year, month.from, month.to)
-    transport_volume = rep(0, length(buses))
-    for (bus in buses){
-      transport_each_volume = NULL
-      for (month_index in months){
-        transport_each_volume = c(transport_each_volume,
-                                  ifelse (is.null(nrow(df[[month_index]][[bus]])),
-                                          0,
-                                          nrow(df[[month_index]][[bus]]))
-                                  )
-      }
-      transport_volume = transport_volume + transport_each_volume
-    }
-    transport_volume_year[[as.character(year)]] = transport_volume  # total
-  }
+  # 使用lapply與sapply取代多層迴圈
+  transport_volume_year <- lapply(years, function(year) {
+    months <- generate_months(year, year, month.from, month.to)
+    sapply(months, function(m) {
+      sum(sapply(buses, function(bus) {
+        nrow(df[[m]][[bus]]) %||% 0  # 使用%||%處理NULL值
+      }))
+    })
+  })
+  names(transport_volume_year) <- as.character(years)
+
 
   par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
   
@@ -940,7 +935,7 @@ month_total_volume_plot <- function(buses, year.from, year.to) {
        bty = "n"
        )
 
-  title(main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年普悠瑪客運月總運量'), cex.main = 2, adj = 0)
+  title(main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', month.from, '月至', month.to, '月', '普悠瑪客運月總運量'), cex.main = 2, adj = 0)
   
   # x 軸
   axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
@@ -985,7 +980,7 @@ month_total_volume_plot(buses, year.from, year.to)
 # 儲存圖片
 path = paste0("images/from_", year.from - 1911, "_to_", year.to - 1911, "/total/line_chart")
 check_path(path)
-main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年普悠瑪客運月總運量')
+main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', month.from, '月至', month.to, '月', '普悠瑪客運月總運量')
 png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
 month_total_volume_plot(buses, year.from, year.to)
 dev.off()
@@ -1001,7 +996,7 @@ month_total_volume_plot(buses, year.from, year.to)
 # 儲存圖片
 path = paste0("images/from_", year.from - 1911, "_to_", year.to - 1911, "/total/line_chart")
 check_path(path)
-main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年普悠瑪客運月總運量')
+main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', month.from, '月至', month.to, '月', '普悠瑪客運月總運量')
 png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
 month_total_volume_plot(buses, year.from, year.to)
 dev.off()
@@ -1017,7 +1012,7 @@ month_total_volume_plot(buses, year.from, year.to)
 # 儲存圖片
 path = paste0("images/from_", year.from - 1911, "_to_", year.to - 1911, "/total/line_chart")
 check_path(path)
-main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年普悠瑪客運月總運量')
+main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', month.from, '月至', month.to, '月', '普悠瑪客運月總運量')
 png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
 month_total_volume_plot(buses, year.from, year.to)
 dev.off()
@@ -1032,7 +1027,7 @@ year_total_volume_plot <- function(buses, year.from, year.to) {
   color <- gray.colors(2)
   
   transport_volume_year <- sapply(years, function(year) {
-    months <- generate_months(year, year, month.from, month.to)
+    months <- generate_months(year, year, 1, 12)
     sum(sapply(buses, function(bus) {
       sum(sapply(months, function(month_index) {
         ifelse(is.null(nrow(df[[month_index]][[bus]])), 
@@ -1074,6 +1069,14 @@ year_total_volume_plot <- function(buses, year.from, year.to) {
   axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
 
   grid()  # 網格線
+  
+  text(x = years,
+       y = transport_volume_year + max(transport_volume_year) * 0.02,
+       labels = transport_volume_year,
+       pos = 3,            # 文字顯示在點上方
+       cex = 1.5,          # 文字大小
+       col = "black"
+  )
   
   # 圖例
   legend("topright", 
@@ -2080,9 +2083,21 @@ for (year in 2024:year.to){
 }
 ```
 
+## 找出TPASS開始使用的時間點
 
 ```{r}
 end_time = Sys.time()
 print(paste0("執行時間: ", round(difftime(end_time, start_time, units = "mins"), 2), " 分鐘"))
+```
+
+
+```{r}
+# when tpass start to use
+combined_df %>% 
+  select(路線編號, 交易票種, 上車時間) %>% 
+  mutate(轉換交易票種 = convert_holder_type(交易票種)) %>%
+  filter(轉換交易票種 == "TPASS",
+         路線編號 == "9806") %>% 
+  arrange(上車時間)
 ```
 
