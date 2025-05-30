@@ -1408,9 +1408,6 @@ check_path(path)
 png(filename = paste0(path, "/month_total_volume_down.png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
 month_total_volume_plot(buses, year.from, year.to)
 dev.off()
-
-
-
 ```
 
 ```{r}
@@ -1459,6 +1456,14 @@ year_total_volume_plot <- function(buses, year.from, year.to) {
   axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
 
   grid()  # 網格線
+  
+  text(x = years,
+       y = transport_volume_year + max(transport_volume_year) * 0.02,
+       labels = transport_volume_year,
+       pos = 3,            # 文字顯示在點上方
+       cex = 1.5,          # 文字大小
+       col = "black"
+  )
   
   # 圖例
   legend("topright", 

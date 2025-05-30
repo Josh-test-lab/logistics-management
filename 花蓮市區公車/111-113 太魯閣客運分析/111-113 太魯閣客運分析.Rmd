@@ -1460,6 +1460,14 @@ year_total_volume_plot <- function(buses, year.from, year.to) {
 
   grid()  # 網格線
   
+  text(x = years,
+       y = transport_volume_year + max(transport_volume_year) * 0.02,
+       labels = transport_volume_year,
+       pos = 3,            # 文字顯示在點上方
+       cex = 1.5,          # 文字大小
+       col = "black"
+  )
+  
   # 圖例
   legend("topright", 
          legend = "總運量", 
