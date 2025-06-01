@@ -196,6 +196,17 @@ str(df[[1]])
 ```
 
 ```{r}
+# TPASS for 11210-11302
+month.from = 1
+month.to = 12
+
+if (2023 %in% year.from:year.to){
+  base_path <- "../../大數據組需要分析的資料/107-11403-花蓮-太魯閣客運_市區客運"
+  months <- generate_months(year.from, year.to, month.from, month.to)
+}
+```
+
+```{r}
 # 整理日期，找出星期幾
 # 新增 Weekday 欄位
 
@@ -2633,21 +2644,24 @@ print(paste0('Cost time: ', end_time - start_time, ' minutes'))
 
 
 ```{r}
-# tpass
+# tpass for earlist passenger
 months = generate_months(2023, year.to, 1, 12)
   
 tpass = data.frame()
 for(bus in buses){
+  tpass_bus = data.frame()
   for(month_index in months){
-    tpass = rbind(tpass, df[[month_index]][[bus]])
+    tpass_bus = rbind(tpass_bus, df[[month_index]][[bus]])
   }
+  print(paste0('earlist TPASS for ', bus, 'is: ', ))
+  tpass = rbind(tpass, tpass_bus)
 }
 
 tpass = tpass[!is.na(tpass$SubTicketType), ]
 tpass$BoardingTime = ymd_hms(tpass$BoardingTime)
 
 earliest_row = tpass[which.min(tpass$BoardingTime), ]
-print('first tpass: ')
+print('first TPASS for all roads: ')
 print(earliest_row)
 
 ```
