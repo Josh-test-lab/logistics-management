@@ -183,7 +183,7 @@ for (month_index in seq(1, length(paths), by = 3)){
   path = paths[month_index:min(month_index + 2, length(paths))]
   df[[months[counter]]] = loader(path)
   
-  setTxtProgressBar(pb, counter)
+  setTxtProgressBar(pb, counter * 3)
   counter = counter + 1
 }
 close(pb)
@@ -197,12 +197,46 @@ str(df[[1]])
 
 ```{r}
 # TPASS for 11210-11302
-month.from = 1
-month.to = 12
-
 if (2023 %in% year.from:year.to){
-  base_path <- "../../大數據組需要分析的資料/107-11403-花蓮-太魯閣客運_市區客運"
-  months <- generate_months(year.from, year.to, month.from, month.to)
+  pb <- txtProgressBar(min = 0, max = length(paths), style = 3)
+  
+  # 檔案路徑
+  base_path <- "../../大數據組需要分析的資料/107-11403-花蓮-太魯閣客運_市區客運/112/壓縮檔/11210-11302 TPASS資料"
+  months <- c("202310", "202311", "202312", "202401", "202402")
+  paths <- unlist(mapply(function(ym) {
+    folder <- sprintf("%s_ic_HUA_0412_01", ym)
+    files <- sprintf("%s_ic_HUA_0412_0%d.xml", ym, 1:3)
+    file.path(base_path, folder, files)
+  }, ym = months, SIMPLIFY = FALSE))
+  
+  counter = 1
+  for (month_index in seq(1, length(paths), by = 3)){
+    path = paths[month_index:min(month_index + 2, length(paths))]
+    
+    xml_data = data.frame()
+    for (i in 1:length(path[[1]])){
+      xml_raw_data = xml_loader(path=path[[1]][i])
+      
+      xml_data <- rbind(xml_data, xml_to_dataframe(xml_raw_data))
+    }
+  
+    data <- xml_data %>%
+      group_by(RouteName) %>%
+      group_split() %>% 
+      as.list()
+    names(data) <- sapply(data, function(df) unique(df$RouteName))
+    
+    
+    # 存入個別車輛資料
+    for (bus in buses){
+      df[[months[counter]]][[bus]] = data[[bus]]
+    }
+    
+    setTxtProgressBar(pb, counter * 3)
+    counter = counter + 1
+  }
+  
+  close(pb)
 }
 ```
 
@@ -2636,12 +2670,6 @@ for (year in 2024:year.to){
 
 
 
-```{r}
-end_time = Sys.time()
-
-print(paste0('Cost time: ', end_time - start_time, ' minutes'))
-```
-
 
 ```{r}
 # tpass for earlist passenger
@@ -2653,19 +2681,26 @@ for(bus in buses){
   for(month_index in months){
     tpass_bus = rbind(tpass_bus, df[[month_index]][[bus]])
   }
-  print(paste0('earlist TPASS for ', bus, 'is: ', ))
+  
+  tpass_bus = tpass_bus[!is.na(tpass_bus$SubTicketType), ]
+  tpass_bus$BoardingTime = ymd_hms(tpass_bus$BoardingTime)
+  
+  print(paste0('earlist TPASS for ', bus, ' is: '))
+  print(tpass_bus[which.min(tpass_bus$BoardingTime), ])
   tpass = rbind(tpass, tpass_bus)
 }
-
-tpass = tpass[!is.na(tpass$SubTicketType), ]
-tpass$BoardingTime = ymd_hms(tpass$BoardingTime)
-
 earliest_row = tpass[which.min(tpass$BoardingTime), ]
 print('first TPASS for all roads: ')
 print(earliest_row)
 
 ```
 
+
+```{r}
+end_time = Sys.time()
+
+print(paste0('Cost time: ', end_time - start_time, ' minutes'))
+```
 
 
 
