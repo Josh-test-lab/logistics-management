@@ -147,7 +147,8 @@ convert_holder_type <- function(types) {
     "C01" = "敬老優待票",
     "C02" = "愛心優待票",
     "C09" = "其他優待票",
-    "D"   = "員工票"
+    "D"   = "員工票",
+    "TPASS" = "TPASS"
   )
   result <- map[types]
   result[is.na(result)] <- "無法辨識"
@@ -251,6 +252,8 @@ if (2023 %in% year.from:year.to){
 # 搭乘時間
 # 是指下車分鐘減去上車分鐘
 
+# 修改 HolderType 使得如果 SubTicketType 是 #HUA-199 或 #HUA-399 就轉為 TPASS
+
 month.from = 1
 month.to = 12
 months = generate_months(year.from, year.to, month.from, month.to)
@@ -280,7 +283,11 @@ for (month_index in months) {
         DeboardingTimeInMinutes = hour(DeboardingParsed) * 60 + minute(DeboardingParsed) + second(DeboardingParsed) / 60,
         
         # 搭乘時間
-        TravelTime = DeboardingTimeInMinutes - BoardingTimeInMinutes
+        TravelTime = DeboardingTimeInMinutes - BoardingTimeInMinutes,
+        
+        # TPASS 修改 (方便畫圖)
+        HolderType = if_else(SubTicketType %in% c('#HUA-199', '#HUA-399'), 'TPASS', HolderType)
+        
       ) |>
       select(-BoardingParsed, -DeboardingParsed)  # 清除中間欄位
   }
