@@ -2319,9 +2319,10 @@ ggplot(combined_bar_df, aes(x = 年份, y = 數量, fill = 路線)) +
             position = position_dodge(width = 0.9), 
             vjust = -0.5, size = 3) +
   geom_line(data = total_df, aes(x = 年份, y = 總量),
-            inherit.aes = FALSE, color = "red", linewidth = 1) +
+            inherit.aes = FALSE, color = "black", linewidth = 1) +
   geom_point(data = total_df, aes(x = 年份, y = 總量),
-             inherit.aes = FALSE, color = "red") +
+             inherit.aes = FALSE, color = "black") +
+  scale_fill_grey(start = 0.3, end = 0.8) +
   labs(title = img_filename,
        y = "搭乘次數", x = "") +
   theme_minimal()
