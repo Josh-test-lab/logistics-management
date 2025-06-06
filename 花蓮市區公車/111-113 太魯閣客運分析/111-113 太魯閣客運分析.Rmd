@@ -747,7 +747,7 @@ tpass_volume_plot <- function(bus, year_index, month.from, month.to) {
        col = color[1],
        xlab = "月份",
        ylab = "搭乘次數",
-       ylim = c(min(tpass) * 0.9, max(transport_volume) * 1.1),
+       ylim = c(min(tpass) * 0.9, max(transport_volume) * 1.2),
        cex.main = 2,
        cex.lab = 2,
        cex.axis = 1.5,
@@ -782,6 +782,14 @@ tpass_volume_plot <- function(bus, year_index, month.from, month.to) {
         cex = 1.5,
         col = color[3]
         )
+  
+  text(x = month.from:month.to,
+       y = transport_volume + max(transport_volume) * 0.02,
+       labels = transport_volume,
+       pos = 3,            # 文字顯示在點上方
+       cex = 1.5,          # 文字大小
+       col = "black"
+      )
   
   grid()  # 網格線
   
@@ -854,7 +862,7 @@ average_daily_tpass_volume_plot <- function(bus, year_index, month.from, month.t
        col = color[1],
        xlab = "月份",
        ylab = "日均人次",
-       ylim = c(min(tpass.volume.per_day) * 0.9, max(month.volume.per_day) * 1.1),
+       ylim = c(min(tpass.volume.per_day) * 0.9, max(month.volume.per_day) * 1.2),
        cex.main = 2,
        cex.lab = 2,
        cex.axis = 1.5,
@@ -870,7 +878,7 @@ average_daily_tpass_volume_plot <- function(bus, year_index, month.from, month.t
   axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
   
   # y 軸
-  axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  axis(side = 2, las = 1, cex.axis = 1.5)
   
   lines(x = month.from:month.to,
         y = tpass.volume.per_day,
@@ -889,6 +897,14 @@ average_daily_tpass_volume_plot <- function(bus, year_index, month.from, month.t
         cex = 1.5,
         col = color[3]
         )
+  
+  text(x = month.from:month.to,
+       y = month.volume.per_day + max(month.volume.per_day) * 0.02,
+       labels = round(x = month.volume.per_day, digits = 2),
+       pos = 3,            # 文字顯示在點上方
+       cex = 1.5,          # 文字大小
+       col = "black"
+      )
   
   grid()  # 網格線
   
