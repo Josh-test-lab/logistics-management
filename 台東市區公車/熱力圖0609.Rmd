@@ -1,0 +1,90 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-05-28"
+---
+
+
+## 運量概括
+
+```{r}
+mytable <- table(year(combined_df$上車時間), combined_df$路線編號)
+addmargins(mytable, margin = 2)
+```
+
+## 大家都搭去哪裡
+
+```{r}
+combined_df %>%
+  filter(路線編號 == "9803",
+         year(上車時間) == "2024",
+         去返程 == "里程返程",
+         ) %>%
+  filter(!is.na(上車招呼站名稱)) %>%
+  select(上車招呼站名稱, 下車招呼站名稱) %>% 
+  count(上車招呼站名稱, 下車招呼站名稱) %>% 
+  arrange(desc(n))
+
+heatmap(table(combined_df$上車招呼站名稱, combined_df$下車招呼站名稱),
+        Rowv = NA, Colv = NA,
+        scale = "column",
+        margins = c(5, 10),
+        xlab = "下車招呼站名稱",
+        ylab = "上車招呼站名稱",
+        main = "上車招呼站與下車招呼站熱圖")
+
+
+library(tidyverse)
+library(reshape2)  # 用於數據重塑
+
+# 原始數據處理流程 (保持不變)
+processed_data <- combined_df %>%
+  filter(路線編號 == "9803",
+         year(上車時間) == "2024",
+         去返程 == "里程返程") %>%
+  filter(!is.na(上車招呼站名稱)) %>%
+  select(上車招呼站名稱, 下車招呼站名稱) %>% 
+  count(上車招呼站名稱, 下車招呼站名稱) %>% 
+  arrange(desc(n))
+
+ggplot(processed_data, aes(x = 下車招呼站名稱, y = 上車招呼站名稱)) +
+  geom_tile(aes(fill = n), color = "white") +
+  geom_text(aes(label = n), color = "black", size = 3) +  # 顯示數值標籤
+  scale_fill_gradient(low = "white", high = "darkgreen") +
+  labs(
+    title = "上下車招呼站熱力圖",
+    x = "下車招呼站名稱",
+    y = "上車招呼站名稱",
+    fill = "乘客數量"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # X軸標籤傾斜
+    plot.title = element_text(hjust = 0.5)              # 標題居中
+  )
+```
+
+## 交易票種分佈
+
+```{r}
+plot(table(combined_df$交易票種))
+```
+
+## 上/下車招呼站分佈
+
+```{r}
+combined_df %>% 
+  filter(路線編號 == "9806") %>% 
+  count(下車招呼站名稱) %>% 
+  arrange(desc(n)) %>% 
+  filter(n > 100) %>%
+  ggplot(aes(x = reorder(下車招呼站名稱, n), y = n)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "9806 下車招呼站名稱分佈",
+       x = "下車招呼站名稱",
+       y = "人次") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+

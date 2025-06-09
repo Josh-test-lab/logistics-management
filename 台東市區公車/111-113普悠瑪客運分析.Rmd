@@ -1,10 +1,10 @@
 ---
-title: "0528_v2"
+title: "111-113普悠瑪客運分析"
 output: html_document
 date: "2025-05-28"
 ---
 
-# 0528_v2
+# 111-113普悠瑪客運分析
 
 ## 自動化讀取與處理普悠瑪客運資料
 
@@ -1066,7 +1066,7 @@ year_total_volume_plot <- function(buses, year.from, year.to) {
   axis(side = 1, at = years, labels = c(years - 1911), cex.axis = 1.5)
   
   # y 軸
-  axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  axis(side = 2, las = 1, cex.axis = 1.2, line = -1.5)
 
   grid()  # 網格線
   
@@ -1911,7 +1911,7 @@ for(boarding in c(TRUE, FALSE)){
 
 4*2 list to do
 
-## TPASS運量: 個別路線
+## TPASS運量: 各路線
 
 ```{r}
 # 個別TPASS運量
@@ -1987,7 +1987,7 @@ for (year in 2024:year.to){
     
   # 儲存圖片
     path = paste0("images/", year - 1911, "/", bus, "/line_chart")
-    check_path(path)
+    check_path(path) 
     main = paste0('112年10月至', year.to - 1911, '年12月', bus, '路線TPASS搭乘次數折線圖')
     png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
     tpass_plot(bus, year)
@@ -1996,7 +1996,7 @@ for (year in 2024:year.to){
 }
 ```
 
-## TPASS運量: 總人次
+## TPASS運量: 總運量
 
 ```{r}
 # 個別TPASS運量
@@ -2083,10 +2083,313 @@ for (year in 2024:year.to){
 }
 ```
 
+## TPASS運量: 各路線運量及TPASS
+
+```{r}
+# TPASS 運量
+tpass_volume_plot <- function(bus, year) {
+  months = generate_months(year, year, month.from, month.to)
+  transport_volume = NULL
+  tpass = NULL
+  color <- gray.colors(3+1)
+  
+  for (month_index in months){
+    temp = ifelse (is.null(df[[month_index]][[bus]]),
+            0,
+            nrow(df[[month_index]][[bus]]))
+    transport_volume = c(transport_volume, temp)
+    temp = ifelse (is.null(df[[month_index]][[bus]][["交易票種"]]),
+            0,
+            table(convert_holder_type(df[[month_index]][[bus]][["交易票種"]]))[["TPASS"]])
+    tpass = c(tpass, temp)
+  }
+
+  par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
+  
+  plot(x = month.from:month.to,
+       y = transport_volume,
+       type = "o",
+       lwd = 2,
+       pch = 16,
+       col = color[1],
+       xlab = "月份",
+       ylab = "搭乘次數",
+       ylim = c(min(tpass) * 0.9, max(transport_volume) * 1.1),
+       cex.main = 2,
+       cex.lab = 2,
+       cex.axis = 1.5,
+       cex = 1.5,
+       xaxt = "n",
+       yaxt = "n",
+       bty = "n"
+       )
+  
+  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線搭乘次數折線圖'), cex.main = 2, adj = 0)
+  
+  # x 軸
+  axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+  
+  # y 軸
+  axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  
+  lines(x = month.from:month.to,
+        y = tpass,
+        type = "o",
+        lwd = 2,
+        pch = 16,
+        col = color[2]
+        )
+  
+  lines(x = month.from:month.to,
+        y = transport_volume - tpass,
+        type = "o",
+        lwd = 2,
+        pch = 16,
+        col = color[3]
+        )
+  
+  text(x = month.from:month.to,
+       y = transport_volume + max(transport_volume) * 0.02,
+       labels = transport_volume,
+       pos = 3,            # 文字顯示在點上方
+       cex = 1.5,          # 文字大小
+       col = "black"
+      )
+  
+  grid()  # 網格線
+  
+  # 圖例
+  legend("topright", 
+         legend = c("總運量", "TPASS旅客", "其他旅客"), 
+         col = color, 
+         lwd = 2, 
+         pch = 16,
+         bty = "n",
+         inset = c(-0.17, 0),
+         xpd = TRUE,
+         cex = 1.5
+         )
+}
+
+# 全年
+month.from = 1
+month.to = 12
+year.from = 2024
+for (year in year.from:year.to){
+  for (bus in buses){
+  
+  # 繪圖 (在 R中呈現)
+    tpass_volume_plot(bus, year)
+    
+  # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/line_chart")
+    check_path(path)
+    main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線月運量及TPASS搭乘次數折線圖')
+    png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
+    tpass_volume_plot(bus, year)
+    dev.off()
+  }
+}
+
+# 上半
+month.from = 1
+month.to = 6
+year.from = 2024
+for (year in year.from:year.to){
+  for (bus in buses){
+  
+  # 繪圖 (在 R中呈現)
+    tpass_volume_plot(bus, year)
+    
+  # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/line_chart")
+    check_path(path)
+    main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線月運量及TPASS搭乘次數折線圖')
+    png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
+    tpass_volume_plot(bus, year)
+    dev.off()
+  }
+}
+
+# 下半
+month.from = 7
+month.to = 12
+year.from = 2024
+for (year in year.from:year.to){
+  for (bus in buses){
+  
+  # 繪圖 (在 R中呈現)
+    tpass_volume_plot(bus, year)
+    
+  # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/line_chart")
+    check_path(path)
+    main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線月運量及TPASS搭乘次數折線圖')
+    png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
+    tpass_volume_plot(bus, year)
+    dev.off()
+  }
+}
+```
+
+## TPASS運量: 各路線日均運量及TPASS
+
+```{r}
+# TPASS 日均運量
+tpass_volume_plot <- function(bus, year) {
+  months = generate_months(year, year, month.from, month.to)
+  transport_volume = NULL
+  tpass = NULL
+  month.days = NULL
+  color <- gray.colors(3+1)
+  
+  for (month_index in months){
+    temp = ifelse (is.null(df[[month_index]][[bus]]),
+            0,
+            nrow(df[[month_index]][[bus]]))
+    transport_volume = c(transport_volume, temp)
+    temp = ifelse (is.null(df[[month_index]][[bus]][["交易票種"]]),
+            0,
+            table(convert_holder_type(df[[month_index]][[bus]][["交易票種"]]))[["TPASS"]])
+    tpass = c(tpass, temp)
+  }
+  
+  for (month_index in month.from:month.to){
+    week.days = monthly_weekday_and_weekend(year = year, month = month_index)[['Freq']]
+    month.days = c(month.days, sum(week.days))
+  }
+  
+  month.volume.per_day = transport_volume / month.days
+  tpass.volume.per_day = tpass / month.days
+  
+  par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
+  
+  plot(x = month.from:month.to,
+       y = month.volume.per_day,
+       type = "o",
+       lwd = 2,
+       pch = 16,
+       col = color[1],
+       xlab = "月份",
+       ylab = "日均人次",
+       ylim = c(min(tpass.volume.per_day) * 0.9, max(month.volume.per_day) * 1.1),
+       cex.main = 2,
+       cex.lab = 2,
+       cex.axis = 1.5,
+       cex = 1.5,
+       xaxt = "n",
+       yaxt = "n",
+       bty = "n"
+       )
+  
+  title(main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均搭乘次數折線圖'), cex.main = 2, adj = 0)
+  
+  # x 軸
+  axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+  
+  # y 軸
+  axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  
+  lines(x = month.from:month.to,
+        y = tpass.volume.per_day,
+        type = "o",
+        lwd = 2,
+        pch = 16,
+        col = color[2]
+        )
+  
+  lines(x = month.from:month.to,
+        y = month.volume.per_day - tpass.volume.per_day,
+        type = "o",
+        lwd = 2,
+        pch = 16,
+        col = color[3]
+        )
+  
+  text(x = month.from:month.to,
+       y = month.volume.per_day + max(month.volume.per_day) * 0.02,
+       labels = round(x = month.volume.per_day, digits = 2),
+       pos = 3,            # 文字顯示在點上方
+       cex = 1.5,          # 文字大小
+       col = "black"
+      )
+  
+  grid()  # 網格線
+  
+  # 圖例
+  legend("topright", 
+         legend = c("月日均", "TPASS旅客", "其他旅客"), 
+         col = color, 
+         lwd = 2, 
+         pch = 16,
+         bty = "n",
+         inset = c(-0.17, 0),
+         xpd = TRUE,
+         cex= 1.5
+         )
+}
+
+# 全年
+month.from = 1
+month.to = 12
+for (year in year.from:year.to){
+  for (bus in buses){
+  
+  # 繪圖 (在 R中呈現)
+    tpass_volume_plot(bus, year)
+  
+  # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/line_chart")
+    check_path(path)
+    main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均運量及TPASS搭乘次數折線圖')
+    png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
+    tpass_volume_plot(bus, year)
+    dev.off()
+  }
+}
+
+# 上半
+month.from = 1
+month.to = 6
+for (year in year.from:year.to){
+  for (bus in buses){
+  
+  # 繪圖 (在 R中呈現)
+    tpass_volume_plot(bus, year)
+  
+  # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/line_chart")
+    check_path(path)
+    main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均運量及TPASS搭乘次數折線圖')
+    png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
+    tpass_volume_plot(bus, year)
+    dev.off()
+  }
+}
+
+# 下半
+month.from = 7
+month.to = 12
+for (year in year.from:year.to){
+  for (bus in buses){
+  
+  # 繪圖 (在 R中呈現)
+    tpass_volume_plot(bus, year)
+  
+  # 儲存圖片
+    path = paste0("images/", year - 1911, "/", bus, "/line_chart")
+    check_path(path)
+    main = paste0(year - 1911, '年', month.from, '月至', month.to, '月', bus, '路線日均運量及TPASS搭乘次數折線圖')
+    png(filename = paste0(path, "/", main, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
+    tpass_volume_plot(bus, year)
+    dev.off()
+  }
+}
+```
+
 ## 找出TPASS開始使用的時間點
 
 ```{r}
-end_time = Sys.time()
 print(paste0("執行時間: ", round(difftime(end_time, start_time, units = "mins"), 2), " 分鐘"))
 ```
 
@@ -2099,5 +2402,77 @@ combined_df %>%
   filter(轉換交易票種 == "TPASS",
          路線編號 == "9806") %>% 
   arrange(上車時間)
+```
+
+## 運量概括 by 俊典的 code
+
+```{r}
+# 運量概括 by 俊典的 code
+year.from = 2022
+year.to = 2024
+month.from = 1
+month.to = 12
+months = generate_months(year.from, year.to, month.from, month.to)
+
+combined_df = data.frame()
+for (month_index in months) {
+  for (bus_index in buses) {
+    combined_df = rbind(combined_df, df[[month_index]][[bus_index]])
+  }
+}
+combined_df$上車時間 = ymd_hms(combined_df$上車時間)
+
+mytable <- table(year(combined_df$上車時間) - 1911, combined_df$路線編號)
+addmargins(mytable, margin = 2)
+prop.table(mytable, margin = 1) %>% round(2)
+
+# 數量資料（轉成 data frame）
+count_df <- as.data.frame(mytable) %>% rename(年份 = Var1, 路線 = Var2, 數量 = Freq)
+
+# 比例資料
+prop_df <- prop.table(mytable, margin = 1) %>% as.data.frame() %>% rename(年份 = Var1, 路線 = Var2, 比例 = Freq)
+
+# 合併 數量 和 比例
+combined_bar_df <- left_join(count_df, prop_df, by = c("年份", "路線"))
+
+# 把 年份 轉成數值（避免 ggplot 軸錯亂）
+combined_bar_df$年份 <- as.numeric(as.character(combined_bar_df$年份))
+
+# 總量（折線圖資料）
+total_df <- rowSums(mytable) %>%
+  as.data.frame() %>%
+  rename(總量 = ".") %>%
+  mutate(年份 = as.numeric(rownames(.)))
+
+img_filename = paste0(year.from - 1911, "年至", year.to - 1911, "年普悠瑪客運運量趨勢")
+
+# 繪圖
+ggplot(combined_bar_df, aes(x = 年份, y = 數量, fill = 路線)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = scales::percent(比例, accuracy = 0.1)),
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3) +
+  geom_line(data = total_df, aes(x = 年份, y = 總量),
+            inherit.aes = FALSE, color = "black", linewidth = 1) +
+  geom_point(data = total_df, aes(x = 年份, y = 總量),
+             inherit.aes = FALSE, color = "black") +
+  scale_fill_grey(start = 0.3, end = 0.8) +
+  labs(title = img_filename,
+       y = "搭乘次數", x = "") +
+  theme_minimal()
+
+# 儲存圖片
+path = paste0("images/from_", year.from - 1911, "_to_", year.to - 1911, "/total/barplot")
+check_path(path)
+img_filename = paste0(year.from - 1911, "年至", year.to - 1911, "年太魯閣客運運量趨勢")
+ggsave(filename = paste0(path, "/", img_filename, ".png"), bg = "white")
+dev.off()
+```
+
+
+```{r}
+end_time = Sys.time()
+
+print(paste0('Cost time: ', end_time - start_time, ' minutes'))
 ```
 

@@ -1,0 +1,1855 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# 設定及區分資料
+```{r}
+library(readxl)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(showtext)
+
+# 檔案路徑，假設所有 Excel 檔案都在這個資料夾
+folder_path <- "C:/Users/user/Desktop/運籌/普悠瑪客運"
+
+# 取得所有 Excel 檔案名稱
+file_list <- list.files(path = folder_path, pattern = "\\.xlsx$", full.names = TRUE)
+
+# 讀取每個 Excel 檔案
+df_list <- map(file_list, ~ read_excel(.))
+
+# 取得所有欄位名稱的交集
+common_cols <- Reduce(intersect, lapply(df_list, names))
+common_list <- map(df_list, ~ .x[, common_cols])
+
+# 使用 bind_rows() 合併所有資料框
+combined_df <- bind_rows(common_list)
+
+
+# 檢視合併後的結果
+head(combined_df)
+table(combined_df$路線編號)
+table(combined_df$上車交易日期)
+
+# 重新命名欄位
+names(combined_df) 
+
+# 上車時間日期
+combined_df$上車日期 <- as.Date(combined_df$上車交易日期, format = "%Y%m%d")
+combined_df$上車年 <- format(combined_df$上車日期, "%Y")
+combined_df$上車月 <- format(combined_df$上車日期, "%m")
+combined_df$上車日 <- format(combined_df$上車日期, "%d")
+
+# 下車時間日期
+combined_df$下車日期 <- as.Date(combined_df$下車交易日期, format = "%Y%m%d")
+combined_df$下車年 <- format(combined_df$下車日期, "%Y")
+combined_df$下車月 <- format(combined_df$下車日期, "%m")
+combined_df$下車日 <- format(combined_df$下車日期, "%d")
+
+# 以路線區分
+route_9801 <- combined_df[which(combined_df$路線編號 == "9801"),]
+route_9803 <- combined_df[which(combined_df$路線編號 == "9803"),]
+route_9805 <- combined_df[which(combined_df$路線編號 == "9805"),]
+route_9806 <- combined_df[which(combined_df$路線編號 == "9806"),]
+
+# 以年區分
+year2022 <- combined_df[which(combined_df$上車年 == "2022"),]
+year2023 <- combined_df[which(combined_df$上車年 == "2023"),]
+year2024 <- combined_df[which(combined_df$上車年 == "2024"),]
+
+# 存csv
+#write.csv(year2022, file = "普悠瑪客運2022.csv", row.names = FALSE, fileEncoding = "UTF-8")
+#write.csv(year2023, file = "普悠瑪客運2023.csv", row.names = FALSE, fileEncoding = "UTF-8")
+#write.csv(year2024, file = "普悠瑪客運2024.csv", row.names = FALSE, fileEncoding = "UTF-8")
+#write.csv(combined_df, file = "普悠瑪客運2022~2024.csv", row.names = FALSE, fileEncoding = "UTF-8")
+```
+
+
+# 111年至113年普悠瑪客運年總運量折線圖
+```{r}
+# 計算
+year_count <- combined_df %>% count(上車年, name = "數量") %>% filter(!is.na(上車年)) %>% mutate(上車年 = as.numeric(上車年) - 1911)
+
+# 查看結果
+print(year_count)
+
+# 儲存圖片
+png("111年至113年普悠瑪客運年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+plot(x = year_count$上車年,
+     y = year_count$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     xlab = "年",
+     ylab = "搭乘次數",
+     ylim = c(min(sapply(year_count$數量, min)) * 0.9 , max(sapply(year_count$數量, max)) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = paste0(min(year_count$上車年), "年至", max(year_count$上車年), '年普悠瑪客運年總運量'), cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = year_count$上車年, labels = year_count$上車年, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.2, line = -1.8)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+       legend = "總運量", 
+       lwd = 2, 
+       pch = 16, 
+       bty = "n", 
+       inset = c(-0.15, 0), 
+       xpd = TRUE, 
+       cex = 1.5)
+
+# 每個點的數字
+text(x = year_count$上車年, 
+     y = year_count$數量, 
+     labels = year_count$數量, 
+     pos = 3,
+     cex = 0.8)
+
+dev.off()
+```
+
+
+# 111年至113年普悠瑪客運月總運量折線圖
+```{r}
+# 計算
+year2022_monthly_count <- year2022 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+year2023_monthly_count <- year2023 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+year2024_monthly_count <- year2024 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+
+# 驗證
+sum(year2022_monthly_count$數量)
+sum(year2023_monthly_count$數量)
+sum(year2024_monthly_count$數量)
+
+# 查看結果
+print(year2022_monthly_count)
+print(year2023_monthly_count)
+print(year2024_monthly_count)
+
+# 儲存圖片
+png("111年至113年普悠瑪客運月總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = year2022_monthly_count$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(year2022_monthly_count$數量, year2023_monthly_count$數量, year2024_monthly_count$數量) * 0.9,
+              max(year2022_monthly_count$數量, year2023_monthly_count$數量, year2024_monthly_count$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年普悠瑪客運月總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, at = seq(4000, 16000, by = 2000), las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = year2023_monthly_count$月份, 
+      y = year2023_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = year2024_monthly_count$月份, 
+      y = year2024_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年普悠瑪客運上半年總運量折線圖
+```{r}
+# 從year2022_monthly_count、year2023_monthly_count、year2024_monthly_count篩選出1~6月的資料
+year2022_monthly_count_up <- year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+year2023_monthly_count_up <- year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+year2024_monthly_count_up <- year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+
+# 驗證
+sum(year2022_monthly_count_up$數量)
+sum(year2023_monthly_count_up$數量)
+sum(year2024_monthly_count_up$數量)
+
+# 查看結果
+print(year2022_monthly_count_up)
+print(year2023_monthly_count_up)
+print(year2024_monthly_count_up)
+
+# 儲存圖片
+png("111年至113年普悠瑪客運上半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+# 字體與圖寬
+library(grDevices)
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 6
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = year2022_monthly_count_up$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(year2022_monthly_count_up$數量, year2023_monthly_count_up$數量, year2024_monthly_count_up$數量) * 0.9,
+              max(year2022_monthly_count_up$數量, year2023_monthly_count_up$數量, year2024_monthly_count_up$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年普悠瑪客運上半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, at = seq(4000, 16000, by = 2000), las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = year2023_monthly_count_up$月份, 
+      y = year2023_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = year2024_monthly_count_up$月份, 
+      y = year2024_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年普悠瑪客運下半年總運量折線圖
+```{r}
+# 從year2022_monthly_count、year2023_monthly_count、year2024_monthly_count篩選出7~12月的資料
+year2022_monthly_count_down <- year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+year2023_monthly_count_down <- year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+year2024_monthly_count_down <- year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+
+# 驗證
+sum(year2022_monthly_count_down$數量)
+sum(year2023_monthly_count_down$數量)
+sum(year2024_monthly_count_down$數量)
+
+# 查看結果
+print(year2022_monthly_count_down)
+print(year2023_monthly_count_down)
+print(year2024_monthly_count_down)
+
+# 儲存圖片
+png("111年至113年普悠瑪客運下半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+# 字體與圖寬
+library(grDevices)
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 7
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = year2022_monthly_count_down$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(year2022_monthly_count_down$數量, year2023_monthly_count_down$數量, year2024_monthly_count_down$數量) * 0.9,
+              max(year2022_monthly_count_down$數量, year2023_monthly_count_down$數量, year2024_monthly_count_down$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年普悠瑪客運下半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, at = seq(4000, 16000, by = 2000), las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = year2023_monthly_count_down$月份, 
+      y = year2023_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = year2024_monthly_count_down$月份, 
+      y = year2024_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+
+# 111年至113年9801路線月總運量折線圖
+```{r}
+# 整理資料
+route_9801_year2022 <- route_9801[which(route_9801$上車年 == "2022"),]
+route_9801_year2023 <- route_9801[which(route_9801$上車年 == "2023"),]
+route_9801_year2024 <- route_9801[which(route_9801$上車年 == "2024"),]
+
+# 計算
+route_9801_year2022_monthly_count <-route_9801_year2022 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+route_9801_year2023_monthly_count <-route_9801_year2023 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+route_9801_year2024_monthly_count <-route_9801_year2024 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+
+# 驗證
+sum(route_9801_year2022_monthly_count$數量)
+sum(route_9801_year2023_monthly_count$數量)
+sum(route_9801_year2024_monthly_count$數量)
+
+# 查看結果
+print(route_9801_year2022_monthly_count)
+print(route_9801_year2023_monthly_count)
+print(route_9801_year2024_monthly_count)
+
+# 儲存圖片
+png("111年至113年9801路線月總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9801_year2022_monthly_count$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9801_year2022_monthly_count$數量, route_9801_year2023_monthly_count$數量, route_9801_year2024_monthly_count$數量) * 0.9,
+              max(route_9801_year2022_monthly_count$數量, route_9801_year2023_monthly_count$數量, route_9801_year2024_monthly_count$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9801路線月總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9801_year2023_monthly_count$月份, 
+      y = route_9801_year2023_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9801_year2024_monthly_count$月份, 
+      y = route_9801_year2024_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年9801路線上半年總運量折線圖
+```{r}
+# 從route_9801_year2022_monthly_count、route_9801_year2023_monthly_count、route_9801_year2024_monthly_count篩選出1~6月的資料
+route_9801_year2022_monthly_count_up <- route_9801_year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+route_9801_year2023_monthly_count_up <- route_9801_year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+route_9801_year2024_monthly_count_up <- route_9801_year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+
+# 驗證
+sum(route_9801_year2022_monthly_count_up$數量)
+sum(route_9801_year2023_monthly_count_up$數量)
+sum(route_9801_year2024_monthly_count_up$數量)
+
+# 查看結果
+print(route_9801_year2022_monthly_count_up)
+print(route_9801_year2023_monthly_count_up)
+print(route_9801_year2024_monthly_count_up)
+
+# 儲存圖片
+png("111年至113年9801路線上半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 6
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9801_year2022_monthly_count_up$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9801_year2022_monthly_count_up$數量, route_9801_year2023_monthly_count_up$數量, route_9801_year2024_monthly_count_up$數量) * 0.9,
+              max(route_9801_year2022_monthly_count_up$數量, route_9801_year2023_monthly_count_up$數量, route_9801_year2024_monthly_count_up$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9801路線上半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9801_year2023_monthly_count_up$月份, 
+      y = route_9801_year2023_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9801_year2024_monthly_count_up$月份, 
+      y = route_9801_year2024_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年9801路線下半年總運量折線圖
+```{r}
+# 從route_9801_year2022_monthly_count、route_9801_year2023_monthly_count、route_9801_year2024_monthly_count篩選出7~12月的資料
+route_9801_year2022_monthly_count_down <- route_9801_year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+route_9801_year2023_monthly_count_down <- route_9801_year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+route_9801_year2024_monthly_count_down <- route_9801_year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+
+# 驗證
+sum(route_9801_year2022_monthly_count_down$數量)
+sum(route_9801_year2023_monthly_count_down$數量)
+sum(route_9801_year2024_monthly_count_down$數量)
+
+# 查看結果
+print(route_9801_year2022_monthly_count_down)
+print(route_9801_year2023_monthly_count_down)
+print(route_9801_year2024_monthly_count_down)
+
+# 儲存圖片
+png("111年至113年9801路線下半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 7
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9801_year2022_monthly_count_down$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9801_year2022_monthly_count_down$數量, route_9801_year2023_monthly_count_down$數量, route_9801_year2024_monthly_count_down$數量) * 0.9,
+              max(route_9801_year2022_monthly_count_down$數量, route_9801_year2023_monthly_count_down$數量, route_9801_year2024_monthly_count_down$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9801路線下半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9801_year2023_monthly_count_down$月份, 
+      y = route_9801_year2023_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9801_year2024_monthly_count_down$月份, 
+      y = route_9801_year2024_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+
+# 111年至113年9803路線月總運量折線圖
+```{r}
+# 整理資料
+route_9803_year2022 <- route_9803[which(route_9803$上車年 == "2022"),]
+route_9803_year2023 <- route_9803[which(route_9803$上車年 == "2023"),]
+route_9803_year2024 <- route_9803[which(route_9803$上車年 == "2024"),]
+
+# 計算
+route_9803_year2022_monthly_count <-route_9803_year2022 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+route_9803_year2023_monthly_count <-route_9803_year2023 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+route_9803_year2024_monthly_count <-route_9803_year2024 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+
+# 驗證
+sum(route_9803_year2022_monthly_count$數量)
+sum(route_9803_year2023_monthly_count$數量)
+sum(route_9803_year2024_monthly_count$數量)
+
+# 查看結果
+print(route_9803_year2022_monthly_count)
+print(route_9803_year2023_monthly_count)
+print(route_9803_year2024_monthly_count)
+
+# 儲存圖片
+png("111年至113年9803路線月總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9803_year2022_monthly_count$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9803_year2022_monthly_count$數量, route_9803_year2023_monthly_count$數量, route_9803_year2024_monthly_count$數量) * 0.9,
+              max(route_9803_year2022_monthly_count$數量, route_9803_year2023_monthly_count$數量, route_9803_year2024_monthly_count$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9803路線月總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9803_year2023_monthly_count$月份, 
+      y = route_9803_year2023_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9803_year2024_monthly_count$月份, 
+      y = route_9803_year2024_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年9803路線上半年總運量折線圖
+```{r}
+# 從route_9803_year2022_monthly_count、route_9803_year2023_monthly_count、route_9803_year2024_monthly_count篩選出1~6月的資料
+route_9803_year2022_monthly_count_up <- route_9803_year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+route_9803_year2023_monthly_count_up <- route_9803_year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+route_9803_year2024_monthly_count_up <- route_9803_year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+
+# 驗證
+sum(route_9803_year2022_monthly_count_up$數量)
+sum(route_9803_year2023_monthly_count_up$數量)
+sum(route_9803_year2024_monthly_count_up$數量)
+
+# 查看結果
+print(route_9803_year2022_monthly_count_up)
+print(route_9803_year2023_monthly_count_up)
+print(route_9803_year2024_monthly_count_up)
+
+# 儲存圖片
+png("111年至113年9803路線上半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 6
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9803_year2022_monthly_count_up$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9803_year2022_monthly_count_up$數量, route_9803_year2023_monthly_count_up$數量, route_9803_year2024_monthly_count_up$數量) * 0.9,
+              max(route_9803_year2022_monthly_count_up$數量, route_9803_year2023_monthly_count_up$數量, route_9803_year2024_monthly_count_up$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9803路線上半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9803_year2023_monthly_count_up$月份, 
+      y = route_9803_year2023_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9803_year2024_monthly_count_up$月份, 
+      y = route_9803_year2024_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年9803路線下半年總運量折線圖
+```{r}
+# 從route_9803_year2022_monthly_count、route_9803_year2023_monthly_count、route_9803_year2024_monthly_count篩選出7~12月的資料
+route_9803_year2022_monthly_count_down <- route_9803_year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+route_9803_year2023_monthly_count_down <- route_9803_year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+route_9803_year2024_monthly_count_down <- route_9803_year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+
+# 驗證
+sum(route_9803_year2022_monthly_count_down$數量)
+sum(route_9803_year2023_monthly_count_down$數量)
+sum(route_9803_year2024_monthly_count_down$數量)
+
+# 查看結果
+print(route_9803_year2022_monthly_count_down)
+print(route_9803_year2023_monthly_count_down)
+print(route_9803_year2024_monthly_count_down)
+
+# 儲存圖片
+png("111年至113年9803路線下半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 7
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9803_year2022_monthly_count_down$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9803_year2022_monthly_count_down$數量, route_9803_year2023_monthly_count_down$數量, route_9803_year2024_monthly_count_down$數量) * 0.9,
+              max(route_9803_year2022_monthly_count_down$數量, route_9803_year2023_monthly_count_down$數量, route_9803_year2024_monthly_count_down$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9803路線下半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9803_year2023_monthly_count_down$月份, 
+      y = route_9803_year2023_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9803_year2024_monthly_count_down$月份, 
+      y = route_9803_year2024_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+
+# 111年至113年9805路線月總運量折線圖
+```{r}
+# 整理資料
+route_9805_year2022 <- route_9805[which(route_9805$上車年 == "2022"),]
+route_9805_year2023 <- route_9805[which(route_9805$上車年 == "2023"),]
+route_9805_year2024 <- route_9805[which(route_9805$上車年 == "2024"),]
+
+# 計算
+route_9805_year2022_monthly_count <-route_9805_year2022 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+route_9805_year2023_monthly_count <-route_9805_year2023 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+route_9805_year2024_monthly_count <-route_9805_year2024 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+
+# 驗證
+sum(route_9805_year2022_monthly_count$數量)
+sum(route_9805_year2023_monthly_count$數量)
+sum(route_9805_year2024_monthly_count$數量)
+
+# 查看結果
+print(route_9805_year2022_monthly_count)
+print(route_9805_year2023_monthly_count)
+print(route_9805_year2024_monthly_count)
+
+# 儲存圖片
+png("111年至113年9805路線月總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9805_year2022_monthly_count$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9805_year2022_monthly_count$數量, route_9805_year2023_monthly_count$數量, route_9805_year2024_monthly_count$數量) * 0.9,
+              max(route_9805_year2022_monthly_count$數量, route_9805_year2023_monthly_count$數量, route_9805_year2024_monthly_count$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9805路線月總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9805_year2023_monthly_count$月份, 
+      y = route_9805_year2023_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9805_year2024_monthly_count$月份, 
+      y = route_9805_year2024_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年9805路線上半年總運量折線圖
+```{r}
+# 從route_9805_year2022_monthly_count、route_9805_year2023_monthly_count、route_9805_year2024_monthly_count篩選出1~6月的資料
+route_9805_year2022_monthly_count_up <- route_9805_year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+route_9805_year2023_monthly_count_up <- route_9805_year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+route_9805_year2024_monthly_count_up <- route_9805_year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+
+# 驗證
+sum(route_9805_year2022_monthly_count_up$數量)
+sum(route_9805_year2023_monthly_count_up$數量)
+sum(route_9805_year2024_monthly_count_up$數量)
+
+# 查看結果
+print(route_9805_year2022_monthly_count_up)
+print(route_9805_year2023_monthly_count_up)
+print(route_9805_year2024_monthly_count_up)
+
+# 儲存圖片
+png("111年至113年9805路線上半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 6
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9805_year2022_monthly_count_up$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9805_year2022_monthly_count_up$數量, route_9805_year2023_monthly_count_up$數量, route_9805_year2024_monthly_count_up$數量) * 0.9,
+              max(route_9805_year2022_monthly_count_up$數量, route_9805_year2023_monthly_count_up$數量, route_9805_year2024_monthly_count_up$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9805路線上半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9805_year2023_monthly_count_up$月份, 
+      y = route_9805_year2023_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9805_year2024_monthly_count_up$月份, 
+      y = route_9805_year2024_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年9805路線下半年總運量折線圖
+```{r}
+# 從route_9805_year2022_monthly_count、route_9805_year2023_monthly_count、route_9805_year2024_monthly_count篩選出7~12月的資料
+route_9805_year2022_monthly_count_down <- route_9805_year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+route_9805_year2023_monthly_count_down <- route_9805_year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+route_9805_year2024_monthly_count_down <- route_9805_year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+
+# 驗證
+sum(route_9805_year2022_monthly_count_down$數量)
+sum(route_9805_year2023_monthly_count_down$數量)
+sum(route_9805_year2024_monthly_count_down$數量)
+
+# 查看結果
+print(route_9805_year2022_monthly_count_down)
+print(route_9805_year2023_monthly_count_down)
+print(route_9805_year2024_monthly_count_down)
+
+# 儲存圖片
+png("111年至113年9805路線下半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 7
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9805_year2022_monthly_count_down$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9805_year2022_monthly_count_down$數量, route_9805_year2023_monthly_count_down$數量, route_9805_year2024_monthly_count_down$數量) * 0.9,
+              max(route_9805_year2022_monthly_count_down$數量, route_9805_year2023_monthly_count_down$數量, route_9805_year2024_monthly_count_down$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9805路線下半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9805_year2023_monthly_count_down$月份, 
+      y = route_9805_year2023_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9805_year2024_monthly_count_down$月份, 
+      y = route_9805_year2024_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+
+# 111年至113年9806路線月總運量折線圖
+```{r}
+# 整理資料
+route_9806_year2022 <- route_9806[which(route_9806$上車年 == "2022"),] 
+route_9806_year2023 <- route_9806[which(route_9806$上車年 == "2023"),]
+route_9806_year2024 <- route_9806[which(route_9806$上車年 == "2024"),]
+
+# 計算
+route_9806_year2022_monthly_count <-route_9806_year2022 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+if(!"07" %in% route_9806_year2022_monthly_count$月份) {
+  route_9806_year2022_monthly_count <- rbind(route_9806_year2022_monthly_count, data.frame(月份 = "07", 數量 = 0))
+  route_9806_year2022_monthly_count <- route_9806_year2022_monthly_count[order(route_9806_year2022_monthly_count$月份), ]  # 重新排序
+}
+route_9806_year2023_monthly_count <-route_9806_year2023 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+if(!"07" %in% route_9806_year2022_monthly_count$月份) {
+  route_9806_year2023_monthly_count <- rbind(route_9806_year2023_monthly_count, data.frame(月份 = "07", 數量 = 0))
+  route_9806_year2023_monthly_count <- route_9806_year2023_monthly_count[order(route_9806_year2023_monthly_count$月份), ]  # 重新排序
+}
+route_9806_year2024_monthly_count <-route_9806_year2024 %>% count(上車月, name = "數量") %>% rename(月份 = 上車月)
+if(!"07" %in% route_9806_year2024_monthly_count$月份) {
+  route_9806_year2024_monthly_count <- rbind(route_9806_year2024_monthly_count, data.frame(月份 = "07", 數量 = 0))
+  route_9806_year2024_monthly_count <- route_9806_year2024_monthly_count[order(route_9806_year2024_monthly_count$月份), ]  # 重新排序
+}
+
+# 驗證
+sum(route_9806_year2022_monthly_count$數量)
+sum(route_9806_year2023_monthly_count$數量)
+sum(route_9806_year2024_monthly_count$數量)
+
+# 查看結果
+print(route_9806_year2022_monthly_count)
+print(route_9806_year2023_monthly_count)
+print(route_9806_year2024_monthly_count)
+
+# 儲存圖片
+png("111年至113年9806路線月總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9806_year2022_monthly_count$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9806_year2022_monthly_count$數量, route_9806_year2023_monthly_count$數量, route_9806_year2024_monthly_count$數量) * 0.9,
+              max(route_9806_year2022_monthly_count$數量, route_9806_year2023_monthly_count$數量, route_9806_year2024_monthly_count$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9806路線月總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9806_year2023_monthly_count$月份, 
+      y = route_9806_year2023_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9806_year2024_monthly_count$月份, 
+      y = route_9806_year2024_monthly_count$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年9806路線上半年總運量折線圖
+```{r}
+# 從route_9806_year2022_monthly_count、route_9806_year2023_monthly_count、route_9806_year2024_monthly_count篩選出1~6月的資料
+route_9806_year2022_monthly_count_up <- route_9806_year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+route_9806_year2023_monthly_count_up <- route_9806_year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+route_9806_year2024_monthly_count_up <- route_9806_year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 1:6))
+
+# 驗證
+sum(route_9806_year2022_monthly_count_up$數量)
+sum(route_9806_year2023_monthly_count_up$數量)
+sum(route_9806_year2024_monthly_count_up$數量)
+
+# 查看結果
+print(route_9806_year2022_monthly_count_up)
+print(route_9806_year2023_monthly_count_up)
+print(route_9806_year2024_monthly_count_up)
+
+# 儲存圖片
+png("111年至113年9806路線上半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 1
+month.to = 6
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9806_year2022_monthly_count_up$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9806_year2022_monthly_count_up$數量, route_9806_year2023_monthly_count_up$數量, route_9806_year2024_monthly_count_up$數量) * 0.9,
+              max(route_9806_year2022_monthly_count_up$數量, route_9806_year2023_monthly_count_up$數量, route_9806_year2024_monthly_count_up$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9806路線上半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9806_year2023_monthly_count_up$月份, 
+      y = route_9806_year2023_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9806_year2024_monthly_count_up$月份, 
+      y = route_9806_year2024_monthly_count_up$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# 111年至113年9806路線下半年總運量折線圖
+```{r}
+# 從route_9806_year2022_monthly_count、route_9806_year2023_monthly_count、route_9806_year2024_monthly_count篩選出7~12月的資料
+route_9806_year2022_monthly_count_down <- route_9806_year2022_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+route_9806_year2023_monthly_count_down <- route_9806_year2023_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+route_9806_year2024_monthly_count_down <- route_9806_year2024_monthly_count %>% filter(月份 %in% sprintf("%02d", 7:12))
+
+# 驗證
+sum(route_9806_year2022_monthly_count_down$數量)
+sum(route_9806_year2023_monthly_count_down$數量)
+sum(route_9806_year2024_monthly_count_down$數量)
+
+# 查看結果
+print(route_9806_year2022_monthly_count_down)
+print(route_9806_year2023_monthly_count_down)
+print(route_9806_year2024_monthly_count_down)
+
+# 儲存圖片
+png("111年至113年9806路線下半年總運量.png", width = 15, height = 5, units = "in", res = 300, family = "kai")
+
+# 繪圖
+library(grDevices)
+
+# 字體與圖寬
+windowsFonts(kai = windowsFont("Microsoft JhengHei"))
+par(family = "kai", mar = c(5, 6, 4, 10))
+
+# 設定時間區間
+month.from = 7
+month.to = 12
+
+# 先畫111年
+color <- gray.colors(3)
+plot(x = month.from:month.to,
+     y = route_9806_year2022_monthly_count_down$數量,
+     type = "o",
+     lwd = 2,
+     pch = 16,
+     col = color[1],
+     xlab = "月份",
+     ylab = "搭乘次數",
+     ylim = c(min(route_9806_year2022_monthly_count_down$數量, route_9806_year2023_monthly_count_down$數量, route_9806_year2024_monthly_count_down$數量) * 0.9,
+              max(route_9806_year2022_monthly_count_down$數量, route_9806_year2023_monthly_count_down$數量, route_9806_year2024_monthly_count_down$數量) * 1.1),
+     cex.main = 2,
+     cex.lab = 2,
+     cex.axis = 1.5,
+     cex = 1.5,
+     xaxt = "n",
+     yaxt = "n",
+     bty = "n")
+
+# 標題
+title(main = "111年至113年9806路線下半年總運量", cex.main = 2, adj = 0)
+
+# x軸
+axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+
+# y軸
+axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+
+# 加上網格線
+grid()
+
+# 圖例
+legend("topright", 
+        legend = paste0(2022:2024 - 1911, "年"), 
+        col = color, 
+        lwd = 2, 
+        pch = 16,
+        bty = "n",
+        inset = c(-0.15, 0),
+        xpd = TRUE,
+        cex = 1.5)
+
+# 每個點的數字
+#text(x = year2022_monthly_count$月份, 
+#     y = year2022_monthly_count$數量, 
+#     labels = year_count$數量, 
+#     pos = 3,
+#     cex = 0.8)
+
+# 補112、113年的線
+lines(x = route_9806_year2023_monthly_count_down$月份, 
+      y = route_9806_year2023_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[2])
+
+lines(x = route_9806_year2024_monthly_count_down$月份, 
+      y = route_9806_year2024_monthly_count_down$數量, 
+      type = "o", 
+      lwd = 2, 
+      pch = 16, 
+      cex = 1.5, 
+      col = color[3])
+
+dev.off()
+```
+
+
+# Book
+```{r}
+# 另自GitHub下載TDX與TWspdata套件
+devtools::install_github("ChiaJung-Yeh/NYCU_TDX")
+devtools::install_github("ChiaJung-Yeh/TWspdata")
+
+# 載入套件
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(sf)
+library(TDX)
+library(TWspdata)
+library(ggspatial)
+library(osmdata)
+library(ggplot2)
+library(ggmap)
+library(ggspatial)
+library(taiwanmap)
+
+# 資料介接
+
+# 台鐵路線站點資料
+TRA_stationofline = Rail_StationOfLine(access_token = get_token(client_id = "611211102-1ac44595-8796-4227", client_secret = "f4ac0044-835c-4310-b720-d3c111a3994e"), 
+                                       operator = "TRA", 
+                                       out = FALSE)
+head(TRA_stationofline)
+
+# 台北捷運路線資料
+TRTC_railshape = Rail_Shape(access_token = get_token(client_id = "611211102-1ac44595-8796-4227", client_secret = "f4ac0044-835c-4310-b720-d3c111a3994e"), 
+                            operator = "TRTC", 
+                            dtype = "sf", 
+                            out = FALSE)
+TRTC_railshape
+
+# 台北捷運站點資料
+TRTC_station = Rail_Station(access_token = get_token(client_id = "611211102-1ac44595-8796-4227", client_secret = "f4ac0044-835c-4310-b720-d3c111a3994e"), 
+                            operator = "TRTC", 
+                            dtype = "sf", 
+                            out = FALSE)
+
+# 繪製台北捷運路網與站點地圖
+ggplot() + 
+  geom_sf(data = TRTC_railshape, aes(color = LineName)) + 
+  scale_color_manual(values = c("淡水信義線" = "#d90023", "板南線" = "#0a59ae", "松山新店線" = "#107547", "中和新蘆線" = "#f5a818", "文湖線" = "#b57a25")) + 
+  geom_sf(data = TRTC_station)
+
+```
+
+
+# 實作
+```{r}
+# 另自GitHub下載TDX與TWspdata套件
+devtools::install_github("ChiaJung-Yeh/NYCU_TDX")
+devtools::install_github("ChiaJung-Yeh/TWspdata")
+
+# 載入套件
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(sf)
+library(TDX)
+library(TWspdata)
+library(ggspatial)
+library(osmdata)
+library(ggplot2)
+library(ggmap)
+library(ggspatial)
+library(fda)
+library(rnaturalearth)
+
+# 台東縣公車路線站點資料，並匯出地理資料
+Taitung_bus_station = Bus_StopOfRoute(access_token = get_token(client_id = "611211102-1ac44595-8796-4227", client_secret = "f4ac0044-835c-4310-b720-d3c111a3994e"),
+                                      county = "TaitungCounty", 
+                                      dtype = "sf", 
+                                      out = FALSE)
+
+# 台東縣市區公車路線資料
+#9801 = 市區循環
+#9803 = 陸海空線A
+#9805 = 陸海空線B
+#9806 = 陸海空線C
+Taitung_bus_route = Bus_Route(access_token = get_token(client_id = "611211102-1ac44595-8796-4227", client_secret = "f4ac0044-835c-4310-b720-d3c111a3994e"), 
+                              county = "TaitungCounty", 
+                              out = FALSE)
+Taitung_bus_shape = Bus_Shape(access_token = get_token(client_id = "611211102-1ac44595-8796-4227", client_secret = "f4ac0044-835c-4310-b720-d3c111a3994e"), 
+                              county = "TaitungCounty", 
+                              dtype = "sf", 
+                              out = FALSE)
+
+
+# 用站點資料生 bbox
+bbox <- st_bbox(Taitung_bus_station)
+
+# 從 OSM 擷取背景元素（例如 highway）
+osm_bg <- opq(bbox = bbox) %>% add_osm_feature(key = "highway") %>% osmdata_sf()
+
+# 3. 畫圖：以台東縣行政區為地圖底圖，限制在你的資料範圍
+ggplot() +
+  geom_sf(data = osm_bg$osm_lines, color = "gray80", size = 0.3) +
+  geom_sf(data = Taitung_bus_shape, aes(color = SubRouteName), size = 1) +
+  geom_sf(data = Taitung_bus_station, aes(color = SubRouteName), size = 2, shape = 21, fill = "white") +
+  scale_color_discrete(name = "台東縣市區公車") +
+  labs(title = "台東縣市區公車路線圖") +
+  coord_sf(xlim = c(bbox["xmin"], bbox["xmax"]), ylim = c(bbox["ymin"], 22.8), expand = TRUE)+
+  theme_minimal()
+ggsave("台東縣市區公車路線圖.png")
+
+
+
+```
+
+
+# 運量概括
+```{r}
+mytable <- table(year(combined_df$上車日期) - 1911, combined_df$路線編號)[,1:4]
+addmargins(mytable, margin = 2)
+prop.table(mytable, margin = 1) %>% round(2)
+
+# 數量資料（轉成 data frame）
+count_df <- as.data.frame(mytable) %>% rename(年份 = Var1, 路線 = Var2, 數量 = Freq)
+
+# 比例資料
+prop_df <- prop.table(mytable, margin = 1) %>% as.data.frame() %>% rename(年份 = Var1, 路線 = Var2, 比例 = Freq)
+
+# 合併 數量 和 比例
+combined_bar_df <- left_join(count_df, prop_df, by = c("年份", "路線"))
+
+# 把 年份 轉成數值（避免 ggplot 軸錯亂）
+combined_bar_df$年份 <- as.numeric(as.character(combined_bar_df$年份))
+
+# 總量（折線圖資料）
+total_df <- rowSums(mytable) %>%
+  as.data.frame() %>%
+  rename(總量 = ".") %>%
+  mutate(年份 = as.numeric(rownames(.)))
+
+# 繪圖
+ggplot(combined_bar_df, aes(x = 年份, y = 數量, fill = 路線)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = scales::percent(比例, accuracy = 0.1)),
+            position = position_dodge(width = 0.9), 
+            vjust = -0.5, size = 3) +
+  geom_line(data = total_df, aes(x = 年份, y = 總量),
+            inherit.aes = FALSE, color = "black", linewidth = 1) +
+  geom_point(data = total_df, aes(x = 年份, y = 總量),
+             inherit.aes = FALSE, color = "black") +
+  scale_fill_grey(start = 0.3, end = 0.8) +
+  labs(title = "111年至113年普悠瑪客運運量趨勢",
+       y = "搭乘次數", x = "") +
+  theme_minimal()
+
+
+
+ggsave("111年至113年111-113年台東市區客運運量統計.png", bg = "white")
+dev.off()
+```
