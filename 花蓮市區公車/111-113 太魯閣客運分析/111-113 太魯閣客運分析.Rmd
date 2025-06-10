@@ -2,7 +2,7 @@
 title: "2024 bus"
 output: html_notebook
 author: "Hsu, Yao-Chih"
-date: "114-06-04"
+date: "114-06-11"
 ---
 
 本程式碼適用於分析111-113年花蓮太魯閣客運所提供的 .xml 資料檔案。
@@ -2344,7 +2344,7 @@ total_df <- rowSums(mytable) %>%
   rename(總量 = ".") %>%
   mutate(年份 = as.numeric(rownames(.)))
 
-img_filename = paste0(year.from - 1911, "年至", year.to - 1911, "年太魯閣客運運量趨勢")
+img_filename = paste0(year.from - 1911, "年至", year.to - 1911, "年花蓮市區客運運量趨勢")
 
 # 繪圖
 ggplot(combined_bar_df, aes(x = 年份, y = 數量, fill = 路線)) +
@@ -2364,7 +2364,7 @@ ggplot(combined_bar_df, aes(x = 年份, y = 數量, fill = 路線)) +
 # 儲存圖片
 path = paste0("images/from_", year.from - 1911, "_to_", year.to - 1911, "/total/barplot")
 check_path(path)
-img_filename = paste0(year.from - 1911, "年至", year.to - 1911, "年太魯閣客運運量趨勢")
+img_filename = paste0(year.from - 1911, "年至", year.to - 1911, "年花蓮市區客運運量趨勢")
 ggsave(filename = paste0(path, "/", img_filename, ".png"), bg = "white")
 ```
 
