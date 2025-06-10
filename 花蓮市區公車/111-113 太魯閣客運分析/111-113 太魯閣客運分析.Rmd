@@ -1506,6 +1506,9 @@ monthly_gorw_up_plot <- function(bus, year_index, month.from, month.to) {
 
   par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
   
+  y_ticks = c(min(df_grow_year) * ifelse(min(df_grow_year) > 0, 0.9, 1.1) , max(df_grow_year) * 1.2)
+  y_ticks = pretty(y_ticks)
+  
   plot(x = month.from:month.to,
        y = df_grow_year,
        type = "o",
@@ -1514,7 +1517,7 @@ monthly_gorw_up_plot <- function(bus, year_index, month.from, month.to) {
        col = color[1],
        xlab = "月份",
        ylab = "成長人數",
-       ylim = c(min(df_grow_year) * ifelse(min(df_grow_year) > 0, 0.9, 1.1) , max(df_grow_year) * 1.2),
+       ylim = c(min(y_ticks), max(y_ticks)),
        cex.main = 2,
        cex.lab = 2,
        cex.axis = 1.5,
@@ -1592,6 +1595,9 @@ weekday_and_weekend_gorw_up_plot <- function(bus, year_index, month.from, month.
 
   par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
   
+  y_ticks = c(min(df_grow_year$平均成長人數) * ifelse(min(df_grow_year$平均成長人數) > 0, 0.9, 1.1) , max(df_grow_year$平均成長人數) * 1.1)
+  y_ticks = pretty(y_ticks)
+  
   plot(x = month.from:month.to,
        y = df_grow_weekday,
        type = "o",
@@ -1600,7 +1606,7 @@ weekday_and_weekend_gorw_up_plot <- function(bus, year_index, month.from, month.
        col = color[1],
        xlab = "月份",
        ylab = "成長人數",
-       ylim = c(min(df_grow_year$平均成長人數) * ifelse(min(df_grow_year$平均成長人數) > 0, 0.9, 1.1) , max(df_grow_year$平均成長人數) * 1.1),
+       ylim = c(min(y_ticks), max(y_ticks)),
        cex.main = 2,
        cex.lab = 2,
        cex.axis = 1.5,
