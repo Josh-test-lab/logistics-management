@@ -2395,8 +2395,7 @@ library(reshape2)  # 用於數據重塑
 all_year_stations_heatmap = function(bus, year_index) {
   processed_data <- combined_df %>%
                     filter(RouteName == bus,
-                           year(BoardingTime) == year_index,
-                           Direction == 0,
+                           year(BoardingTime) == year_index
                            ) %>%
                     filter(DeboardingStopName != '-99') %>%
                     select(BoardingStopName, DeboardingStopName) %>% 
