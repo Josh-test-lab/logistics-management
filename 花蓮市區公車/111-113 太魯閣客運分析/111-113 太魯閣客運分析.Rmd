@@ -1223,7 +1223,7 @@ generate_total_volume_plot(buses, year.from, year.to, 7, 12)  # 下半年
 
 ```{r}
 # 太魯閣客運多年總運量(月)
-month_total_volume_plot <- function(buses, year.from, year.to, month.from, month.to, plot_title) {
+month_total_volume_plot <- function(buses, year.from, year.to, month.from, month.to) {
   years = year.from:year.to
   color <- gray.colors(length(years)+1)
   
@@ -1261,7 +1261,7 @@ month_total_volume_plot <- function(buses, year.from, year.to, month.from, month
        bty = "n"
        )
 
-  title(main = plot_title, cex.main = 2, adj = 0)
+  title(main = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', month.from, '月', '至', month.to, '月太魯閣客運月總運量'), cex.main = 2, adj = 0)
   
   # x 軸
   axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
@@ -1295,27 +1295,23 @@ month_total_volume_plot <- function(buses, year.from, year.to, month.from, month
          )
 }
 
-generate_month_total_volume_plot <- function(buses, year.from, year.to, month.from, month.to, full_year=FALSE) {
-  if (full_year){
-    img_filename = paste0(year.from - 1911, '年', month.from, '月', '至', year.to - 1911, '年', month.to, '月太魯閣客運月總運量')
-  } else {
-    img_filename = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', month.from, '月', '至', month.to, '月太魯閣客運月總運量')
-  }
+generate_month_total_volume_plot <- function(buses, year.from, year.to, month.from, month.to) {
   
   # 繪圖 (在 R中呈現)
-  month_total_volume_plot(buses, year.from, year.to, month.from, month.to, img_filename)
+  month_total_volume_plot(buses, year.from, year.to, month.from, month.to)
   
   # 儲存圖片
   path = paste0("images/from_", year.from - 1911, "_to_", year.to - 1911, "/total/line chart")
   check_path(path)
+  img_filename = paste0(year.from - 1911, '年', '至', year.to - 1911, '年', month.from, '月', '至', month.to, '月太魯閣客運月總運量')
   png(filename = paste0(path, "/", img_filename, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
-  month_total_volume_plot(buses, year.from, year.to, month.from, month.to, img_filename)
+  month_total_volume_plot(buses, year.from, year.to, month.from, month.to)
   dev.off()
 }
 
 
 # 繪圖
-generate_month_total_volume_plot(buses, year.from, year.to, 1, 12, full_year=TRUE)  # 全年
+generate_month_total_volume_plot(buses, year.from, year.to, 1, 12)  # 全年
 generate_month_total_volume_plot(buses, year.from, year.to, 1, 6)   # 上半年
 generate_month_total_volume_plot(buses, year.from, year.to, 7, 12)  # 下半年
 ```
