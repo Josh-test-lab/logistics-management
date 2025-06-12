@@ -2395,8 +2395,7 @@ library(reshape2)  # 用於數據重塑
 all_year_stations_heatmap = function(bus, year_index) {
   processed_data <- combined_df %>%
                     filter(RouteName == bus,
-                           year(BoardingTime) == year_index,
-                           Direction == 0,
+                           year(BoardingTime) == year_index
                            ) %>%
                     filter(DeboardingStopName != '-99') %>%
                     select(BoardingStopName, DeboardingStopName) %>% 
@@ -2412,7 +2411,7 @@ all_year_stations_heatmap = function(bus, year_index) {
   #        main = "上車招呼站與下車招呼站熱圖")
   
   # 原始數據處理流程 (保持不變)
-  p = ggplot(processed_data, aes(x = BoardingStopName, y = DeboardingStopName)) +
+  p = ggplot(processed_data, aes(x = DeboardingStopName, y = BoardingStopName)) +
     geom_tile(aes(fill = n), color = "white") +
     #geom_text(aes(label = n), color = "black", size = 3) +  # 顯示數值標籤
     scale_fill_gradient(low = "white", high = "black") +
