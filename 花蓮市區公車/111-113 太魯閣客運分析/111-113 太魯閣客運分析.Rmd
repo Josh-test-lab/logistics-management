@@ -19,6 +19,8 @@ library(tidyr)
 library(ggplot2)
 ```
 
+# function
+
 ```{r}
 # function
 start_time = Sys.time()
@@ -155,6 +157,8 @@ convert_holder_type <- function(types) {
   return(result)
 }
 ```
+
+# load data
 
 ```{r}
 # config

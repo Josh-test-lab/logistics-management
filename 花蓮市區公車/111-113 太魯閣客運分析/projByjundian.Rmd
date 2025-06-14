@@ -1,0 +1,43 @@
+---
+title: "projByjundian"
+output: html_document
+date: "2025-06-12"
+---
+
+
+```{r}
+#load data
+library(dplyr)
+library(lubridate)
+wanted_stations <- c("圖書館資訊大樓", "育成中心", "原住民學院", "行政大樓")
+NDHU_df <- combined_df[combined_df$BoardingStopName %in% wanted_stations, ]
+unique(NDHU_df$BoardingStopName)
+names(combined_df)
+
+table(combined_df$SubRouteName)
+
+combined_df %>% 
+  filter(SubRouteName == "301") %>% 
+  count(BoardingStopName)
+
+wanted_stations <- c("圖書館資訊大樓", "育成中心", "原住民學院", "行政大樓")
+NDHU_df <- combined_df %>% 
+  filter(SubRouteName == "301",
+         BoardingStopName %in% wanted_stations) %>% 
+  select(SubRouteName, BoardingStopName, BoardingTime) %>% 
+  mutate(boardingTime = as.Date(BoardingTime))
+print(NDHU_df)
+
+dailyBoarding <- NDHU_df %>% 
+  count(boardingTime)
+print(dailyBoarding)
+
+summary(dailyBoarding$n)
+
+var(dailyBoarding$n)
+
+t.test(dailyBoarding$n, mu = 100)
+
+
+```
+
