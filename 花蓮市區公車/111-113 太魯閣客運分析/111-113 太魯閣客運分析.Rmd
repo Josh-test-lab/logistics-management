@@ -2425,7 +2425,7 @@ all_year_stations_heatmap = function(bus, year_index) {
       y = "上車站點",
       fill = "搭乘次數"
     ) +
-    theme_minimal(base_size = 20) +
+    theme_minimal(base_size = 15) +
     theme(
       axis.text.x = element_text(angle = 45, hjust = 1)  # X軸標籤傾斜
     )
