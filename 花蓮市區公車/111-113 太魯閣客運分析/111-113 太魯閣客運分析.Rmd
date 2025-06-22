@@ -691,7 +691,7 @@ volume_plot <- function(bus, year_index, month.from, month.to) {
   
   # 圖例
   legend("topright", 
-         legend = paste0(bus, '路線'), 
+         legend = paste0('路線', bus), 
          col = "gray", 
          lwd = 2, 
          pch = 16,
@@ -740,6 +740,16 @@ tpass_volume_plot <- function(bus, year_index, month.from, month.to) {
     tpass = c(tpass, sum(df_summary[[month_index]][[bus]][['SubTicketType']][[2]]) - as.data.frame(df_summary[[month_index]][[bus]]$SubTicketType)[[2]][is.na(df_summary[[month_index]][[bus]]$SubTicketType$SubTicketType)]
               )
   }
+  
+  other_volume = transport_volume - tpass
+  tpass_table = data.frame('total' = transport_volume,
+                           'tpass' = tpass, 
+                           'other' = other_volume, 
+                           'tpass_percentage' = round(tpass / transport_volume * 100, 2), 
+                           'other_percentage' = round(other_volume / transport_volume * 100, 2)
+                           ) %>% t()
+  colnames(tpass_table) = months
+  print(tpass_table)
 
   par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
   
@@ -2167,7 +2177,7 @@ tpass_plot <- function(bus, year.to) {
   
   # 圖例
   legend("topright", 
-         legend = paste0(bus, '路線'), 
+         legend = paste0('路線', bus), 
          col = "gray", 
          lwd = 2, 
          pch = 16,
@@ -2464,7 +2474,101 @@ for (year_index in year.from:year.to){
 #  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+```{r}
+# 多年個別TPASS運量
+year_tpass_plot <- function(bus, year.from, year.to, month.from, month.to) {
+  color <- gray.colors(length(year.from:year.to) + 1)
+  
+  tpass = data.frame()
+  for(year_index in year.from:year.to){
+    months = generate_months(year_index, year_index, month.from, month.to)
+    year_data = NULL
+    for(month_index in months){
+      year_data = c(year_data, sum(df_summary[[month_index]][[bus]][['SubTicketType']][[2]]) 
+                - as.data.frame(df_summary[[month_index]][[bus]]$SubTicketType)[[2]][is.na(df_summary[[month_index]][[bus]]$SubTicketType$SubTicketType)]
+                )
+    }
+    tpass = rbind(tpass, year_data)
+  }
+  colnames(tpass) = month.from:month.to
+  rownames(tpass) = year.from:year.to
+  
+  par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
+  
+  plot(x = month.from:month.to,
+       y = tpass[1, ],
+       type = "o",
+       lwd = 2,
+       pch = 16,
+       col = color[1],
+       xlab = "月份",
+       ylab = "搭乘次數",
+       ylim = c(min(tpass) * 0.9, max(tpass) * 1.1),
+       cex.main = 2,
+       cex.lab = 2,
+       cex.axis = 1.5,
+       cex = 1.5,
+       xaxt = "n",
+       yaxt = "n",
+       bty = "n"
+       )
+  
+  title(main = paste0(year.from - 1911, '年至', year.to - 1911, '年', month.from, '月至', month.to, '月路線', bus, 'TPASS搭乘次數折線圖'), cex.main = 2, adj = 0)
+  
+  for(index in 2:nrow(tpass)){
+    lines(x = month.from:month.to,
+          y = tpass[index, ],
+          type = "o",
+          lwd = 2,
+          pch = 16,
+          cex = 1.5,
+          col = color[index]
+          )
+  }
+  
+  # x 軸
+  axis(side = 1, at = month.from:month.to, labels = month.from:month.to, cex.axis = 1.5)
+  
+  # y 軸
+  axis(side = 2, las = 1, cex.axis = 1.5, line = -1.5)
+  
+  grid()  # 網格線
+  
+  # 圖例
+  legend("topright", 
+         legend = paste0(year.from:year.to - 1911, '年'), 
+         col = color[1:nrow(tpass)], 
+         lwd = 2, 
+         pch = 16,
+         bty = "n",
+         inset = c(-0.15, 0),
+         xpd = TRUE,
+         cex = 1.5
+         )
+}
 
+generate_year_tpass_plot <- function(buses, year.from, year.to, month.from, month.to){
+  for (bus in buses){
+  # 繪圖 (在 R中呈現)
+    year_tpass_plot(bus, year.from, year.to, month.from, month.to)
+    
+  # 儲存圖片
+    path = paste0("images/from_", year.from - 1911, "_to_", year.to - 1911, "/", bus, "/line chart")
+    check_path(path)
+    img_filename = paste0(year.from - 1911, '年至', year.to - 1911, '年', month.from, '月至', month.to, '月路線', bus, 'TPASS搭乘次數折線圖')
+    png(filename = paste0(path, "/", img_filename, ".png"), width = 15, height = 5, units = "in", res = 300, family = "kai")
+    year_tpass_plot(bus, year.from, year.to, month.from, month.to)
+    dev.off()
+  }
+}
+
+# 畫到至今為止的圖
+year.from = 2023
+year.to = 2024
+generate_year_tpass_plot(buses, year.from, year.to, 1, 12)  # 全年
+generate_year_tpass_plot(buses, year.from, year.to, 1, 6)   # 上半年
+generate_year_tpass_plot(buses, year.from, year.to, 7, 12)  # 下半年
+```
 
 
 
