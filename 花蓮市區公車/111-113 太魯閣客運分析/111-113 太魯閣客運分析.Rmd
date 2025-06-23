@@ -749,6 +749,7 @@ tpass_volume_plot <- function(bus, year_index, month.from, month.to) {
                            'other_percentage' = round(other_volume / transport_volume * 100, 2)
                            ) %>% t()
   colnames(tpass_table) = months
+  print(bus)
   print(tpass_table)
 
   par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
@@ -2484,14 +2485,37 @@ year_tpass_plot <- function(bus, year.from, year.to, month.from, month.to) {
     months = generate_months(year_index, year_index, month.from, month.to)
     year_data = NULL
     for(month_index in months){
-      year_data = c(year_data, sum(df_summary[[month_index]][[bus]][['SubTicketType']][[2]]) 
+      if(year_index < 2023){
+        year_data = c(year_data, NA)
+      } else if (year_index == 2023 & !(month_index %in% c("202310", "202311", "202312"))){
+        year_data = c(year_data, NA)
+      } else {
+        year_data = c(year_data, sum(df_summary[[month_index]][[bus]][['SubTicketType']][[2]]) 
                 - as.data.frame(df_summary[[month_index]][[bus]]$SubTicketType)[[2]][is.na(df_summary[[month_index]][[bus]]$SubTicketType$SubTicketType)]
                 )
+      }        
     }
     tpass = rbind(tpass, year_data)
   }
   colnames(tpass) = month.from:month.to
   rownames(tpass) = year.from:year.to
+  
+  if(length(year.from:year.to)>=2){
+    print(paste(bus, '較前期運量變化率(%)'))
+    tpass_change_rate = data.frame()
+    year_index = year.from:year.to
+    for(index in 2:length(year.from:year.to)){
+      last_year <- as.numeric(tpass[as.character(year_index[index - 1]), ])
+      this_year <- as.numeric(tpass[as.character(year_index[index]), ])
+      change_rate <- ifelse(!is.na(last_year), round((this_year - last_year) / last_year * 100), NA)
+      tpass_change_rate = rbind(tpass_change_rate, setNames(as.data.frame(t(change_rate)), month.from:month.to))
+    }
+    
+    rownames(tpass_change_rate) = (year.from + 1):year.to
+    print(as.matrix(tpass_change_rate))
+  }
+  
+  
   
   par(family = "kai", mar = c(5, 6, 4, 10))  # 字體與圖寬
   
@@ -2503,7 +2527,7 @@ year_tpass_plot <- function(bus, year.from, year.to, month.from, month.to) {
        col = color[1],
        xlab = "月份",
        ylab = "搭乘次數",
-       ylim = c(min(tpass) * 0.9, max(tpass) * 1.1),
+       ylim = c(min(tpass[!is.na(tpass)]) * 0.9, max(tpass[!is.na(tpass)]) * 1.1),
        cex.main = 2,
        cex.lab = 2,
        cex.axis = 1.5,
